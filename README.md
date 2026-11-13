@@ -43,7 +43,9 @@ clang and Go prebuilts.
    `rustc`, `rustdoc` and `clippy-driver` get a wrapper that sets
    `RUSTC_BOOTSTRAP=1`: Soong passes `-Z` flags, which a stable rust-lang.org
    build rejects, and runs rustc with a cleared environment.
-6. Fails on any x86-64 binary in the arm64 prebuilts and on an x86
+6. Links `prebuilts/clang/host/linux-x86/linux-arm64 -> ../linux-arm64` for the
+   patched clang Soong plugin.
+7. Fails on any x86-64 binary in the arm64 prebuilts and on an x86
    binfmt_misc handler.
 
 Downloads are cached in `$HOME/.cache/android-host-arm64` (inside `/opt/los`).
@@ -66,6 +68,7 @@ Downloads are cached in `$HOME/.cache/android-host-arm64` (inside `/opt/los`).
 | prebuilts/jdk/jdk21 | enable javap on arm64 | module was x86_64-only |
 | system/sepolicy | getopt() results in an int | `char` is unsigned on arm64: `-1` became 255 |
 | frameworks/libs/binary_translation | dummy intrinsics generator on arm64 hosts | Berberis disables arm64, so a genrule needed a disabled host tool |
+| prebuilts/clang/host/linux-x86 | Soong plugin: llvm tools from linux-arm64 on arm64 hosts | `llvm_prebuilt_build_tool` (llvm-objdump, ...) and `llvm-tools` pointed at x86 binaries |
 
 Checked against LineageOS 24.0 sources (2026-11-13): every patch applies with
 `git am`; the Soong changes build with Go 1.25.4 and pass the `android`,
@@ -86,7 +89,9 @@ written against the LineageOS tree from the errors they describe.
 ## Known open items (fix when the build hits them)
 
 - **Cronet** (`external/cronet`): its `-msse3` is filtered in Soong (above).
-  Actinis also found x86 `llvm-objdump`/`llvm-nm` called by path.
+  Actinis' x86 `llvm-objdump`/`llvm-nm` finding is covered by the clang
+  plugin patch: no Cronet or Connectivity build file or genrule script calls
+  them by path in LineageOS 24.0 (checked 2026-11-13).
 - **Rust host sysroot**: `rust_sysroot_defaults` builds the sysroot from
   source for `musl_arm64` while `libstd` is a prebuilt. Actinis hit duplicate
   `std` errors (E0464/E0460/E0152) and fixed them in `rust/builder.go`.

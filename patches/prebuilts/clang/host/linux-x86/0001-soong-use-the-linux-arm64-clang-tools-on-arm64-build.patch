@@ -1,0 +1,70 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Martin=20=C5=A0trobl?= <recordyletsplays@gmail.com>
+Date: Fri, 13 Nov 2026 22:03:33 +0100
+Subject: [PATCH] soong: use the linux-arm64 clang tools on arm64 build hosts
+
+llvm_prebuilt_build_tool modules (llvm-objdump, llvm-readobj, ...) and
+the llvm-tools filegroup point at bin/ of this linux-x86 prebuilt, so on
+an arm64 build host every rule using them would run x86 binaries.
+
+On arm64 hosts point them at the linux-arm64 clang instead. Module
+sources must be below the module directory, so they go through a
+"linux-arm64" link to ../linux-arm64 in this directory (created by the
+host setup). Those tools are musl binaries that load libc_musl.so from
+../lib, which replaces the x86 libc++.so dependency.
+---
+ soong/clangprebuilts.go | 27 ++++++++++++++++++++++++++-
+ 1 file changed, 26 insertions(+), 1 deletion(-)
+
+diff --git a/soong/clangprebuilts.go b/soong/clangprebuilts.go
+index 4a7e3c7..edd173e 100644
+--- a/soong/clangprebuilts.go
++++ b/soong/clangprebuilts.go
+@@ -37,6 +37,15 @@ var (
+ 		"bin/llvm-symbolizer",
+ 		"lib/x86_64-unknown-linux-gnu/libc++.so",
+ 	}
++
++	// The same tools on arm64 build hosts.
++	llvmToolsFilesArm64 = []string{
++		"bin/llvm-cxxfilt",
++		"bin/llvm-objcopy",
++		"bin/llvm-strip",
++		"bin/llvm-symbolizer",
++		"lib/libc_musl.so",
++	}
+ )
+ 
+ // This module is used to generate libfuzzer, libomp static libraries and
+@@ -393,6 +402,15 @@ func llvmPrebuiltBuildTool(ctx android.LoadHookContext) {
+ 	deps := []string{
+ 		path.Join(clangDir, "lib", "x86_64-unknown-linux-gnu", "libc++.so"),
+ 	}
++	if ctx.Config().BuildArch == android.Arm64 {
++		// arm64 build hosts run the linux-arm64 clang's tools. Module sources
++		// must be below the module directory, so they are reached through a
++		// "linux-arm64" link to ../linux-arm64 in this directory. The tools are
++		// musl binaries that load libc_musl.so from ../lib.
++		armDir := path.Join("linux-arm64", clangDir)
++		src = path.Join(armDir, "bin", name)
++		deps = []string{path.Join(armDir, "lib", "libc_musl.so")}
++	}
+ 
+ 	type props struct {
+ 		Enabled *bool
+@@ -742,7 +760,14 @@ func llvmToolsFileGroup(ctx android.LoadHookContext) {
+ 
+ 	p := &props{}
+ 	prebuiltDir := path.Join(getClangPrebuiltDir(ctx))
+-	for _, src := range llvmToolsFiles {
++	files := llvmToolsFiles
++	if ctx.Config().BuildArch == android.Arm64 {
++		// The linux-arm64 clang through the "linux-arm64" link (see
++		// llvmPrebuiltBuildTool); its tools load libc_musl.so from ../lib.
++		prebuiltDir = path.Join("linux-arm64", prebuiltDir)
++		files = llvmToolsFilesArm64
++	}
++	for _, src := range files {
+ 		p.Srcs = append(p.Srcs, path.Join(prebuiltDir, src))
+ 	}
+ 	ctx.AppendProperties(p)

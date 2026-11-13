@@ -94,6 +94,13 @@ for v in $(echo $CVERS | tr ' ' '\n' | sort -u); do
 	fi
 	echo "   $v -> $(readlink -f "$CDIR/$v" | xargs basename)"
 done
+# The patched clang Soong plugin in linux-x86 reaches the arm64 llvm tools
+# (llvm-objdump, llvm-strip, ...) through this link: module sources must be
+# below the module directory.
+XLINK=prebuilts/clang/host/linux-x86/linux-arm64
+[ -e "$XLINK" ] || ln -s ../linux-arm64 "$XLINK"
+[ "$(readlink "$XLINK")" = ../linux-arm64 ] || die "$XLINK is not a link to ../linux-arm64"
+echo "   linux-x86/linux-arm64 -> ../linux-arm64"
 
 # --- 3. Go ------------------------------------------------------------------
 say "go"
