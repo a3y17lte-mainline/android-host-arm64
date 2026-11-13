@@ -1,0 +1,61 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Martin=20=C5=A0trobl?= <recordyletsplays@gmail.com>
+Date: Fri, 13 Nov 2026 21:21:42 +0100
+Subject: [PATCH] intrinsics: use the dummy generator on arm64 Linux build
+ hosts
+
+Berberis disables all arm64 variants, including the arm64 host. On an
+arm64 Linux build host gen_riscv64_to_x86_64_intrinsics was therefore
+disabled, and Soong analysis failed because the always-enabled genrule
+libberberis_intrinsics_gen_inline_headers_riscv64_to_x86_64 uses it.
+
+Build the dummy generator there, as on darwin, and scope the real
+generator's sources and dependencies to linux_x86_64. x86_64 hosts are
+unchanged.
+---
+ cpu_emulation/intrinsics/Android.bp | 12 +++++++++---
+ 1 file changed, 9 insertions(+), 3 deletions(-)
+
+diff --git a/cpu_emulation/intrinsics/Android.bp b/cpu_emulation/intrinsics/Android.bp
+index dff85f6..eb40569 100644
+--- a/cpu_emulation/intrinsics/Android.bp
++++ b/cpu_emulation/intrinsics/Android.bp
+@@ -248,7 +248,7 @@ cc_binary_host {
+     defaults: ["gen_text_asm_intrinsics_defaults"],
+     local_include_dirs: ["riscv64_to_x86_64"],
+     target: {
+-        linux: {
++        linux_x86_64: {
+             generated_headers: [
+                 "libberberis_intrinsics_gen_public_headers_riscv64_to_x86_64",
+                 "libberberis_macro_assembler_gen_intrinsics_headers_riscv64_to_x86_64",
+@@ -272,7 +272,6 @@ cc_defaults {
+     // Currently none of Android builds that we care about used 32bit version of host tools.
+     defaults: ["berberis_guest_agnostic_defaults_64"],
+     host_supported: true,
+-    header_libs: ["libberberis_intrinsics_headers"],
+     // Note: since this tool is used in genrule, it has to be buildable and
+     // available on all platforms unconditionally.
+     //
+@@ -286,13 +285,20 @@ cc_defaults {
+             enabled: true,
+             srcs: [":dummy_gen_text_asm_intrinsics_srcs"],
+         },
+-        linux: {
++        // Berberis is disabled on arm64, so on arm64 Linux build hosts the
++        // generator is the dummy too.
++        linux_arm64: {
++            enabled: true,
++            srcs: [":dummy_gen_text_asm_intrinsics_srcs"],
++        },
++        linux_x86_64: {
+             // We are only ever executing that binary once, it's faster to build it without
+             // optimizations and spend half-second more running it, than spend tens of seconds
+             // optimizing the code to save that half-second.
+             cflags: ["-O0"],
+             srcs: [":gen_text_asm_intrinsics_srcs"],
+             header_libs: [
++                "libberberis_intrinsics_headers",
+                 "libberberis_assembler_headers", // Immediates.
+                 "libberberis_base_headers",
+                 "libberberis_device_arch_info_headers",

@@ -55,6 +55,7 @@ Downloads are cached in `$HOME/.cache/android-host-arm64` (inside `/opt/los`).
 | prebuilts/build-tools | enable bison/flex/m4/make on arm64 | modules were x86_64-only |
 | prebuilts/jdk/jdk21 | enable javap on arm64 | module was x86_64-only |
 | system/sepolicy | getopt() results in an int | `char` is unsigned on arm64: `-1` became 255 |
+| frameworks/libs/binary_translation | dummy intrinsics generator on arm64 hosts | Berberis disables arm64, so a genrule needed a disabled host tool |
 
 Checked against LineageOS 24.0 sources (2026-11-13): every patch applies with
 `git am`; the Soong changes build with Go 1.25.4 and pass the `android`,
