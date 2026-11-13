@@ -6,18 +6,19 @@ Linux host (DGX Spark, Ubuntu 24.04 arm64 container). No x86 emulation.
 ## Use
 
 ```
-# once, in the synced tree (/build/src in the container)
-mkdir -p .repo/local_manifests
-cp /build/android-host-arm64/local_manifests/host-arm64.xml .repo/local_manifests/
-repo sync -c -j8 --no-tags prebuilts/clang/host/linux-arm64 prebuilts/go/linux-arm64
+# once: put local_manifests/host-arm64.xml into .repo/local_manifests/, then
+repo sync -c -j8 --no-tags
 
 # after every repo sync
-/build/android-host-arm64/setup.sh
+tools/android-host-arm64/setup.sh
 
 # per shell
 source build/envsetup.sh
-source /build/android-host-arm64/env.sh
+source tools/android-host-arm64/env.sh
 ```
+
+repo syncs this repo to `tools/android-host-arm64` along with the arm64
+clang and Go prebuilts.
 
 `docker/` has the Dockerfile and compose.yaml for `/opt/los`.
 

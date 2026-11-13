@@ -145,4 +145,4 @@ if ls /proc/sys/fs/binfmt_misc/ 2>/dev/null | grep -qiE 'x86|amd64'; then
 fi
 echo "   clean"
 
-say "done: source build/envsetup.sh && source $HERE/env.sh"
+say "done: source build/envsetup.sh && source ${HERE#"$TOP/"}/env.sh"
