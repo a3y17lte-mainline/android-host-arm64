@@ -6,37 +6,53 @@ Subject: [PATCH 6/7] android: stage the build-tools libraries for sandboxed
 
 The linux-arm64 build-tools binaries are dynamically linked against
 libc_musl.so and find it, and their other libraries, through the
-$ORIGIN/../lib64 runpath. RuleBuilderCommand.PrebuiltBuildTool only
-copied the binary into the sbox sandbox, so bison failed with "unable to
-find loader libc_musl.so" (libhidl-gen-ast yacc rule).
+$ORIGIN/../lib64 runpath. RuleBuilder only copied the binary into the
+sbox sandbox, so bison failed with "unable to find loader libc_musl.so"
+(libhidl-gen-ast yacc rule); toybox, which provides the common shell
+tools there, has the same dependency.
 
 On linux-arm64 hosts also stage libc_musl.so and the libraries ziptool
-uses. x86 hosts are unchanged.
+uses, for PrebuiltBuildTool and the toybox tools. x86 hosts are
+unchanged.
 ---
- android/rule_builder.go | 13 ++++++++++++-
- 1 file changed, 12 insertions(+), 1 deletion(-)
+ android/rule_builder.go | 20 +++++++++++++++++++-
+ 1 file changed, 19 insertions(+), 1 deletion(-)
 
 diff --git a/android/rule_builder.go b/android/rule_builder.go
-index 7678961..1f5be49 100644
+index 7678961..fd7fcb5 100644
 --- a/android/rule_builder.go
 +++ b/android/rule_builder.go
-@@ -1452,7 +1452,18 @@ func (c *RuleBuilderCommand) builtToolWithoutDeps(tool string) *RuleBuilderComma
+@@ -1431,6 +1431,7 @@ func (c *RuleBuilderCommand) builtToolWithoutDeps(tool string) *RuleBuilderComma
+ 		symlink := PathForSource(ctx, fmt.Sprintf("prebuilts/build-tools/path/%s/%s", ctx.Config().PrebuiltOS(), tool))
+ 		c.Tool(symlink)
+ 		c.ImplicitTool(binary)
++		c.prebuiltBuildToolLibs(ctx)
+ 		return c
+ 	}
+ 
+@@ -1452,7 +1453,24 @@ func (c *RuleBuilderCommand) builtToolWithoutDeps(tool string) *RuleBuilderComma
  //
  //	cmd.Tool(ctx.Config().PrebuiltBuildTool(ctx, tool))
  func (c *RuleBuilderCommand) PrebuiltBuildTool(ctx PathContext, tool string) *RuleBuilderCommand {
 -	return c.Tool(ctx.Config().PrebuiltBuildTool(ctx, tool))
 +	c.Tool(ctx.Config().PrebuiltBuildTool(ctx, tool))
-+	if ctx.Config().PrebuiltOS() == "linux-arm64" {
-+		// The linux-arm64 build tools are dynamically linked musl binaries that
-+		// find their libraries through the $ORIGIN/../lib64 runpath. Stage the
-+		// ones they use (libc_musl.so for bison, flex and m4; the rest for
-+		// ziptool) so they also run in a sandbox.
-+		for _, lib := range []string{"libc_musl.so", "libc++.so", "libbase.so", "liblog.so",
-+			"libziparchive.so", "libz-host.so"} {
-+			c.ImplicitTool(PathForSource(ctx, "prebuilts/build-tools/linux-arm64/lib64", lib))
-+		}
-+	}
++	c.prebuiltBuildToolLibs(ctx)
 +	return c
++}
++
++// prebuiltBuildToolLibs stages the libraries of the linux-arm64 build tools.
++// Those are dynamically linked musl binaries that find their libraries
++// through the $ORIGIN/../lib64 runpath, so in a sandbox the libraries must be
++// next to them: libc_musl.so for bison, flex, m4 and toybox, the rest for
++// ziptool. Nothing to do for the statically linked x86 tools.
++func (c *RuleBuilderCommand) prebuiltBuildToolLibs(ctx PathContext) {
++	if ctx.Config().PrebuiltOS() != "linux-arm64" {
++		return
++	}
++	for _, lib := range []string{"libc_musl.so", "libc++.so", "libbase.so", "liblog.so",
++		"libziparchive.so", "libz-host.so"} {
++		c.ImplicitTool(PathForSource(ctx, "prebuilts/build-tools/linux-arm64/lib64", lib))
++	}
  }
  
  // Input adds the specified input path to the command line.  The path will also be added to the dependencies returned by
