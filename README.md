@@ -37,6 +37,9 @@ clang and Go prebuilts.
    rustc for the glibc host, the `aarch64-unknown-linux-musl` std (Soong's
    host triple on arm64) and rust-src, plus an `Android.bp` for the host
    `libstd`. The AOSP linux-arm64 Rust project is empty.
+   `rustc`, `rustdoc` and `clippy-driver` get a wrapper that sets
+   `RUSTC_BOOTSTRAP=1`: Soong passes `-Z` flags, which a stable rust-lang.org
+   build rejects, and runs rustc with a cleared environment.
 6. Fails on any x86-64 binary in the arm64 prebuilts and on an x86
    binfmt_misc handler.
 

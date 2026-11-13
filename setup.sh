@@ -156,7 +156,18 @@ if [ ! -f "$RBASE/Android.bp" ]; then
 	}
 	EOF
 fi
-echo "   $("$RDIR/bin/rustc" --version)"
+# Soong passes -Z flags. Android's own toolchain accepts them; a rust-lang.org
+# stable build only with RUSTC_BOOTSTRAP=1. Soong runs rustc with a cleared
+# environment (soong_env -i), so set it in a wrapper next to the binary.
+for t in rustc rustdoc clippy-driver; do
+	[ -f "$RDIR/bin/$t" ] || continue
+	if [ ! -e "$RDIR/bin/$t.real" ]; then
+		mv "$RDIR/bin/$t" "$RDIR/bin/$t.real"
+		printf '#!/bin/sh\n# android-host-arm64: allow -Z flags on the stable toolchain\nexport RUSTC_BOOTSTRAP=1\nexec "${0%%/*}/%s.real" "$@"\n' "$t" > "$RDIR/bin/$t"
+		chmod +x "$RDIR/bin/$t"
+	fi
+done
+echo "   $("$RDIR/bin/rustc" --version), -Z enabled via RUSTC_BOOTSTRAP wrapper"
 
 # --- 6. No x86 binaries where the build looks for host tools ----------------
 say "x86 check"
