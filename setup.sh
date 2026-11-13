@@ -135,10 +135,17 @@ echo "   $("$RDIR/bin/rustc" --version)"
 
 # --- 6. No x86 binaries where the build looks for host tools ----------------
 say "x86 check"
-bad=$(find prebuilts/clang/host/linux-arm64/"$CLANG"/ prebuilts/go/linux-arm64 \
-	prebuilts/jdk/jdk21/linux-arm64 "$RDIR" prebuilts/build-tools/linux-arm64 \
-	prebuilts/build-tools/path/linux-arm64 -type f -perm -u+x -print0 2>/dev/null \
-	| xargs -0 -r file -L | grep -E 'ELF 64-bit.*x86-64' || true)
+# Only what runs on the host: tool dirs and host libraries. Not target
+# runtimes (clang ships x86_64 Android libs, NDK lldb-server) or test data.
+C=prebuilts/clang/host/linux-arm64/$CLANG/
+hostbins() {
+	find "$C"bin "$C"libexec prebuilts/go/linux-arm64/bin prebuilts/go/linux-arm64/pkg/tool \
+		prebuilts/jdk/jdk21/linux-arm64/bin prebuilts/jdk/jdk21/linux-arm64/lib \
+		"$RDIR"/bin prebuilts/build-tools/linux-arm64 prebuilts/build-tools/path/linux-arm64 \
+		-type f -print0 2>/dev/null
+	find "$C"lib "$RDIR"/lib -maxdepth 1 -type f -print0 2>/dev/null
+}
+bad=$(hostbins | xargs -0 -r file -L | grep -E 'ELF 64-bit.*x86-64' || true)
 [ -z "$bad" ] || die "x86-64 binaries in arm64 prebuilts:"$'\n'"$bad"
 if ls /proc/sys/fs/binfmt_misc/ 2>/dev/null | grep -qiE 'x86|amd64'; then
 	die "an x86 binfmt_misc handler is registered: x86 binaries would run emulated"
