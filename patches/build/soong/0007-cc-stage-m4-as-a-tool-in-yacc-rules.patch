@@ -1,0 +1,30 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Martin=20=C5=A0trobl?= <recordyletsplays@gmail.com>
+Date: Fri, 13 Nov 2026 21:48:21 +0100
+Subject: [PATCH 7/7] cc: stage m4 as a tool in yacc rules
+
+bison runs m4, which was passed in as an input. In the sbox sandbox
+inputs and tools live in different trees, so on arm64 hosts m4 did not
+find the libc_musl.so staged next to the tools ("unable to find loader
+libc_musl.so"). Pass m4 as a tool so it gets the same staging as bison.
+---
+ cc/gen.go | 5 ++++-
+ 1 file changed, 4 insertions(+), 1 deletion(-)
+
+diff --git a/cc/gen.go b/cc/gen.go
+index a5c9a4a..cf3e50b 100644
+--- a/cc/gen.go
++++ b/cc/gen.go
+@@ -98,8 +98,11 @@ func genYacc(ctx android.ModuleContext, rule *android.RuleBuilder, yaccFile andr
+ 		}
+ 	}
+ 
++	// m4 is run by bison, so stage it as a tool (with the libraries tools get)
++	// rather than as an input.
++	m4 := ctx.Config().PrebuiltBuildTool(ctx, "m4")
+ 	cmd.Text("BISON_PKGDATADIR=prebuilts/build-tools/common/bison").
+-		FlagWithInput("M4=", ctx.Config().PrebuiltBuildTool(ctx, "m4")).
++		Text("M4="+cmd.PathForTool(m4)).ImplicitTool(m4).
+ 		PrebuiltBuildTool(ctx, "bison").
+ 		Flag("-d").
+ 		Flags(flags).

@@ -60,6 +60,7 @@ Downloads are cached in `$HOME/.cache/android-host-arm64` (inside `/opt/los`).
 | build/soong | android: stage libc_musl.so | built musl host tools could not load libc in the sandbox |
 | build/soong | genrule: skip host_second_srcs without a 32-bit host | analysis panic in `art_common_host_test_libs_zip` |
 | build/soong | android: stage build-tools libraries in the sandbox | sandboxed bison could not find `libc_musl.so` |
+| build/soong | cc: stage m4 as a tool in yacc rules | m4 (an input) did not find the staged `libc_musl.so` |
 | prebuilts/build-tools | enable bison/flex/m4/make on arm64 | modules were x86_64-only |
 | prebuilts/jdk/jdk21 | enable javap on arm64 | module was x86_64-only |
 | system/sepolicy | getopt() results in an int | `char` is unsigned on arm64: `-1` became 255 |
