@@ -1,7 +1,7 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Martin=20=C5=A0trobl?= <recordyletsplays@gmail.com>
 Date: Fri, 13 Nov 2026 20:04:16 +0100
-Subject: [PATCH 4/8] android: stage libc_musl.so for built tools on musl build
+Subject: [PATCH 4/9] android: stage libc_musl.so for built tools on musl build
  hosts
 
 BuiltTool only added libc_musl.so to the sandbox when USE_HOST_MUSL was

@@ -1,7 +1,7 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Martin=20=C5=A0trobl?= <recordyletsplays@gmail.com>
 Date: Fri, 13 Nov 2026 21:59:00 +0100
-Subject: [PATCH 8/8] cc: drop x86 instruction set flags from host modules on
+Subject: [PATCH 8/9] cc: drop x86 instruction set flags from host modules on
  arm64 hosts
 
 Cronet's GN-generated Android.bp files put the x86 host's -msse3 on
