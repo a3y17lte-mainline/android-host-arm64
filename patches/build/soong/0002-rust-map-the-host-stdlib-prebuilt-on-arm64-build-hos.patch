@@ -7,15 +7,18 @@ rust_stdlib_prebuilt_host modules only had targets for glibc/musl x86 and
 darwin. On an arm64 Linux host (BuildOS LinuxMusl, BuildArch Arm64) the
 module in prebuilts/rust-toolchain/linux-arm64 matched no branch, was
 renamed to prebuilt_libstd.linux-arm64, and no host libstd existed.
+Meanwhile the linux-musl-x86 module matched on BuildOS alone and claimed
+libstd for an x86 toolchain.
 
-Add a linux_musl_arm64 target pointing at the
-aarch64-unknown-linux-musl rustlib directory of the linux-arm64 toolchain.
+Add a linux_musl_arm64 target pointing at the aarch64-unknown-linux-musl
+rustlib directory of the linux-arm64 toolchain, and only match the
+linux-musl-x86 module on x86_64 build hosts.
 ---
- rust/toolchain_library.go | 3 +++
- 1 file changed, 3 insertions(+)
+ rust/toolchain_library.go | 5 ++++-
+ 1 file changed, 4 insertions(+), 1 deletion(-)
 
 diff --git a/rust/toolchain_library.go b/rust/toolchain_library.go
-index b78d538..597df32 100644
+index b78d538..babfc2f 100644
 --- a/rust/toolchain_library.go
 +++ b/rust/toolchain_library.go
 @@ -153,6 +153,7 @@ type hostPrebuiltProps struct {
@@ -26,8 +29,12 @@ index b78d538..597df32 100644
  		Darwin_x86_64      hostPrebuiltTargetProps
  	}
  }
-@@ -179,6 +180,8 @@ func constructLibProps(rlib, solib bool) func(ctx android.LoadHookContext) {
- 		} else if platform == "linux-musl-x86" && ctx.Config().BuildOS == android.LinuxMusl {
+@@ -176,9 +177,11 @@ func constructLibProps(rlib, solib bool) func(ctx android.LoadHookContext) {
+ 		if platform == "linux-x86" && ctx.Config().BuildOS == android.Linux {
+ 			p.Target.Linux_glibc_x86_64.addPrebuiltToTarget(ctx, name, rustDir, "linux-x86", "x86_64-unknown-linux-gnu", rlib, solib)
+ 			p.Target.Linux_glibc_x86.addPrebuiltToTarget(ctx, name, rustDir, "linux-x86", "i686-unknown-linux-gnu", rlib, solib)
+-		} else if platform == "linux-musl-x86" && ctx.Config().BuildOS == android.LinuxMusl {
++		} else if platform == "linux-musl-x86" && ctx.Config().BuildOS == android.LinuxMusl && ctx.Config().BuildArch == android.X86_64 {
  			p.Target.Linux_musl_x86_64.addPrebuiltToTarget(ctx, name, rustDir, "linux-musl-x86", "x86_64-unknown-linux-musl", rlib, solib)
  			p.Target.Linux_musl_x86.addPrebuiltToTarget(ctx, name, rustDir, "linux-musl-x86", "i686-unknown-linux-musl", rlib, solib)
 +		} else if platform == "linux-arm64" && ctx.Config().BuildOS == android.LinuxMusl && ctx.Config().BuildArch == android.Arm64 {

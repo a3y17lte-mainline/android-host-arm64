@@ -22,23 +22,36 @@ say() { echo "== $*"; }
 cd "$TOP"
 
 # --- 1. Patch series ---------------------------------------------------------
+# Per project: if the commits on top of the manifest revision (repo's m/ ref)
+# are exactly our series, nothing to do. Otherwise (fresh sync, or an older
+# version of the series) reset to the manifest revision and apply the series.
 apply_patches() {
-	local p proj
-	while IFS= read -r p; do
-		proj=$(dirname "${p#"$HERE/patches/"}")
-		[ -d "$proj/.git" ] || [ -f "$proj/.git" ] || die "project $proj missing"
-		if git -C "$proj" apply -R --check "$p" 2>/dev/null; then
-			echo "   applied already: $proj/$(basename "$p")"
+	local d proj base want have
+	while IFS= read -r d; do
+		proj=${d#"$HERE/patches/"}
+		[ -e "$proj/.git" ] || die "project $proj missing"
+		base=$(git -C "$proj" for-each-ref --count=1 --format='%(objectname)' refs/remotes/m/)
+		[ -n "$base" ] || die "$proj: no manifest ref (refs/remotes/m/*); is this a repo checkout?"
+		want=$(cat "$d"/*.patch | git patch-id --stable | cut -d' ' -f1)
+		have=$(git -C "$proj" log --reverse -p --no-color "$base..HEAD" | git patch-id --stable | cut -d' ' -f1)
+		if [ "$want" = "$have" ]; then
+			echo "   up to date: $proj"
 			continue
 		fi
-		echo "   applying: $proj/$(basename "$p")"
+		if [ "$(git -C "$proj" rev-parse HEAD)" != "$base" ]; then
+			[ -z "$(git -C "$proj" status --porcelain --untracked-files=no)" ] \
+				|| die "$proj has uncommitted changes"
+			echo "   $proj: dropping $(git -C "$proj" rev-list --count "$base..HEAD") old local commit(s)"
+			git -C "$proj" reset -q --hard "$base"
+		fi
+		echo "   applying: $proj ($(ls "$d"/*.patch | wc -l) patches)"
 		if ! git -C "$proj" -c user.name="${GIT_COMMITTER_NAME:-$(git config user.name || echo builder)}" \
 			-c user.email="${GIT_COMMITTER_EMAIL:-$(git config user.email || echo builder@localhost)}" \
-			am -q --3way --keep-cr "$p"; then
+			am -q --3way --keep-cr "$d"/*.patch; then
 			git -C "$proj" am --abort || true
-			die "$p does not apply to $proj: rebase it"
+			die "patches/$proj do not apply: rebase them"
 		fi
-	done < <(find "$HERE/patches" -name '*.patch' | sort)
+	done < <(find "$HERE/patches" -name '*.patch' -printf '%h\n' | sort -u)
 }
 say "patches"
 apply_patches
