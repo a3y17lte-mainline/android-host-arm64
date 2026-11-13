@@ -27,7 +27,8 @@ clang and Go prebuilts.
 1. Applies `patches/<project>/*.patch` with `git am` (skips applied ones).
    `repo sync` drops these local commits, so run it again after a sync.
 2. clang: the tree pins `clang-r584948`; AOSP publishes the arm64 build as
-   `clang-r584948b`. It links the unsuffixed name.
+   `clang-r584948b`; LineageOS cp2a overrides it to `clang-r596125`. The pinned
+   arm64 commit has both; setup.sh links the unsuffixed name.
 3. Go: checks `prebuilts/go/linux-arm64` (go1.25.4, same as linux-x86).
 4. JDK 21: Temurin 21.0.4+7 aarch64 (the tree's x86 JDK is 21.0.4) into
    `prebuilts/jdk/jdk21/linux-arm64`, sha256-pinned. AOSP has no arm64 JDK 21.

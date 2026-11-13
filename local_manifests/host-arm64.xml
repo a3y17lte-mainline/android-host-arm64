@@ -6,8 +6,11 @@
   - the AOSP linux-arm64 clang and Go prebuilts. The x86 projects stay:
     their Android.bp files define modules Soong needs. The arm64 projects
     have no android-17 tags; these commits match the tree's versions:
-      clang: ClangDefaultVersion clang-r584948, arm64 build is clang-r584948b
-             (setup.sh links the unsuffixed name)
+      clang: a70cecf3 has clang-r584948b and clang-r596125 (LineageOS cp2a's
+             RELEASE_BUILD_CLANG_VERSION; same LLVM revision as linux-x86) and
+             no Android.bp. Later commits add one using llvm_host_arch_filegroup,
+             which this Soong does not know. setup.sh links clang-r584948
+             (ClangDefaultVersion) to clang-r584948b.
       go:    go1.25.4, same as prebuilts/go/linux-x86 at android-17.0.0_r1
 -->
 <manifest>
@@ -19,8 +22,8 @@
   <project path="prebuilts/clang/host/linux-arm64"
            name="platform/prebuilts/clang/host/linux-arm64"
            remote="aosp" clone-depth="1"
-           revision="198cef08637a6133e98b4a80e36f0ca35775fa9a"
-           upstream="mirror-goog-llvm-r596125-release" />
+           revision="a70cecf3ce95d669302703e43c38c823af3f8513"
+           upstream="mirror-google-llvm-r614150-release" />
   <project path="prebuilts/go/linux-arm64"
            name="platform/prebuilts/go/linux-arm64"
            remote="aosp" clone-depth="1"

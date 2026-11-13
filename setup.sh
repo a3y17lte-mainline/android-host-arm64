@@ -60,15 +60,27 @@ fetch() { # url sha256 -> path in cache
 }
 
 # --- 2. clang: the tree pins clang-rNNN, arm64 is built as clang-rNNNb ------
+# The release config can override the default (LineageOS cp2a: clang-r596125),
+# so every version named by Soong or the release flags must exist.
 say "clang"
 CLANG=$(sed -n 's/^\s*ClangDefaultVersion\s*=\s*"\(.*\)"/\1/p' build/soong/cc/config/global.go)
+REL=$(sed -n 's/^aosp_target_release=//p' vendor/lineage/vars/aosp_target_release 2>/dev/null || true)
+CVERS="$CLANG"
+if [ -n "$REL" ]; then
+	CVERS+=" $(cat build/release/flag_values/"$REL"/RELEASE_BUILD_CLANG_VERSION.textproto \
+		vendor/lineage/release/flag_values/"$REL"/RELEASE_BUILD_CLANG_VERSION.textproto 2>/dev/null \
+		| sed -n 's/.*string_value: *"\(clang-r[^"]*\)".*/\1/p')"
+fi
 CDIR=prebuilts/clang/host/linux-arm64
 [ -d "$CDIR" ] || die "$CDIR missing: add local_manifests/host-arm64.xml and repo sync"
-if [ ! -e "$CDIR/$CLANG" ]; then
-	[ -d "$CDIR/${CLANG}b" ] || die "no arm64 build of $CLANG (or ${CLANG}b) in $CDIR"
-	ln -s "${CLANG}b" "$CDIR/$CLANG"
-fi
-echo "   $CLANG -> $(readlink -f "$CDIR/$CLANG" | xargs basename)"
+[ ! -e "$CDIR/Android.bp" ] || die "$CDIR/Android.bp exists: it uses module types this Soong lacks; pin the commit from local_manifests/host-arm64.xml"
+for v in $(echo $CVERS | tr ' ' '\n' | sort -u); do
+	if [ ! -e "$CDIR/$v" ]; then
+		[ -d "$CDIR/${v}b" ] || die "no arm64 build of $v (or ${v}b) in $CDIR"
+		ln -s "${v}b" "$CDIR/$v"
+	fi
+	echo "   $v -> $(readlink -f "$CDIR/$v" | xargs basename)"
+done
 
 # --- 3. Go ------------------------------------------------------------------
 say "go"
