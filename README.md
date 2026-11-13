@@ -64,7 +64,7 @@ Downloads are cached in `$HOME/.cache/android-host-arm64` (inside `/opt/los`).
 | build/soong | android: stage build-tools libraries in the sandbox | sandboxed bison could not find `libc_musl.so` |
 | build/soong | cc: stage m4 as a tool in yacc rules | m4 (an input) did not find the staged `libc_musl.so` |
 | build/soong | cc: drop x86 instruction set flags from arm64 host modules | Cronet's generated `-msse3` on every host module |
-| build/soong | rust: no source-built host sysroot on arm64 hosts | cc modules got the source-built `libstd`, Rust modules the prebuilt: E0464/E0152 in dex2oatd's generated Rust staticlib |
+| build/soong | rust: prebuilt selection sees rlib/dylib srcs | `force_use_prebuilt` never applied, so cc's static `libstd` (`rust_static_std`) got the source-built std while Rust modules got the prebuilt: E0464/E0152 in dex2oatd's generated Rust staticlib |
 | prebuilts/build-tools | enable bison/flex/m4/make on arm64 | modules were x86_64-only |
 | prebuilts/jdk/jdk21 | enable javap on arm64 | module was x86_64-only |
 | system/sepolicy | getopt() results in an int | `char` is unsigned on arm64: `-1` became 255 |

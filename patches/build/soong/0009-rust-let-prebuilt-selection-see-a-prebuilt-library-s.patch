@@ -1,0 +1,48 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Martin=20=C5=A0trobl?= <recordyletsplays@gmail.com>
+Date: Sat, 14 Nov 2026 00:21:00 +0100
+Subject: [PATCH 9/9] rust: let prebuilt selection see a prebuilt library's
+ rlib/dylib srcs
+
+rust_stdlib_prebuilt_host (and rust_prebuilt_library) set their files
+in rlib.srcs / dylib.srcs, which begin() only merges into srcs when the
+module's build actions are generated. Source or prebuilt selection runs
+before that, saw no srcs, treated the prebuilt as disabled and never
+replaced dependencies on the source module, force_use_prebuilt or not.
+
+On arm64 build hosts the linux-arm64 prebuilt libstd and the source
+libstd that rust_sysroot_defaults enables for musl_arm64 both exist for
+the host. Rust modules ask for prebuilt_libstd explicitly, but a cc
+module's static "libstd" (system/unwinding's rust_static_std for
+rustc_demangle_static) stayed on the source one, so dex2oatd's generated
+Rust staticlib got two std crates:
+
+  error[E0464]: multiple candidates for `rlib` dependency `core` found
+  error[E0152]: duplicate lang item in crate `std`: `panic_impl`
+
+Fall back to the variant's srcs in prebuiltSrcs().
+---
+ rust/prebuilt.go | 10 +++++++++-
+ 1 file changed, 9 insertions(+), 1 deletion(-)
+
+diff --git a/rust/prebuilt.go b/rust/prebuilt.go
+index b66f32e..60a94d0 100644
+--- a/rust/prebuilt.go
++++ b/rust/prebuilt.go
+@@ -209,7 +209,15 @@ func (prebuilt *prebuiltLibraryDecorator) nativeCoverage() bool {
+ }
+ 
+ func (prebuilt *prebuiltLibraryDecorator) prebuiltSrcs(ctx android.BaseModuleContext) []string {
+-	return prebuilt.Properties.Srcs.GetOrDefault(ctx, nil)
++	srcs := prebuilt.Properties.Srcs.GetOrDefault(ctx, nil)
++	if len(srcs) == 0 {
++		// begin() merges the rlib/dylib srcs into Srcs, but source or
++		// prebuilt selection runs before that and would see no srcs.
++		if variant := prebuilt.variantProperties(); variant != nil {
++			srcs = variant.Srcs.GetOrDefault(ctx, nil)
++		}
++	}
++	return srcs
+ }
+ 
+ func (prebuilt *prebuiltLibraryDecorator) prebuilt() *android.Prebuilt {
