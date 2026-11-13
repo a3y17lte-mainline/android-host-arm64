@@ -1,0 +1,45 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Martin=20=C5=A0trobl?= <recordyletsplays@gmail.com>
+Date: Fri, 13 Nov 2026 20:04:16 +0100
+Subject: [PATCH 1/4] ui: use the host's nsjail prebuilt for sandboxing
+
+nsjailPath hardcoded prebuilts/build-tools/linux-x86/bin/nsjail. On an
+arm64 host that binary cannot run, so the sandbox self-test failed and
+the build printed "Build sandboxing disabled due to nsjail error".
+
+Use PrebuiltBuildTool("nsjail"), which resolves to the build-tools
+directory for the host (linux-x86 on x86_64 hosts, as before).
+---
+ ui/build/sandbox_linux.go | 5 ++---
+ 1 file changed, 2 insertions(+), 3 deletions(-)
+
+diff --git a/ui/build/sandbox_linux.go b/ui/build/sandbox_linux.go
+index 441161d..a6b0f41 100644
+--- a/ui/build/sandbox_linux.go
++++ b/ui/build/sandbox_linux.go
+@@ -48,7 +48,6 @@ var (
+ )
+ 
+ const (
+-	nsjailPath = "prebuilts/build-tools/linux-x86/bin/nsjail"
+ 	abfsSrcDir = "/src"
+ )
+ 
+@@ -131,7 +130,7 @@ func (c *Cmd) sandboxSupported() bool {
+ 			"--",
+ 			"/bin/bash", "-c", `if [ $(hostname) == "android-build" ]; then echo "Android" "Success"; else echo Failure; fi`)
+ 
+-		cmd := exec.CommandContext(c.ctx.Context, nsjailPath, sandboxArgs...)
++		cmd := exec.CommandContext(c.ctx.Context, c.config.PrebuiltBuildTool("nsjail"), sandboxArgs...)
+ 
+ 		cmd.Env = c.envForSandbox(c.config.Environment())
+ 
+@@ -363,7 +362,7 @@ func (c *Cmd) wrapSandbox() {
+ 	sandboxArgs = append(sandboxArgs, "--")
+ 
+ 	c.Args = append(sandboxArgs, c.Args[1:]...)
+-	c.Path = nsjailPath
++	c.Path = c.config.PrebuiltBuildTool("nsjail")
+ 
+ 	env := Environment(c.Env)
+ 	if _, hasUser := env.Get("USER"); hasUser {

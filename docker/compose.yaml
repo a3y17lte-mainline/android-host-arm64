@@ -1,0 +1,22 @@
+# Copy compose.yaml, Dockerfile and a .env with UID=$(id -u) to /opt/los.
+# Everything (tree, out/, ccache, the builder's home) stays under /opt/los.
+services:
+  losbuild:
+    build:
+      context: .
+      args:
+        UID: ${UID:-1000}
+    image: losbuild
+    container_name: losbuild
+    hostname: losbuild
+    init: true
+    command: sh -c 'mkdir -p /build/home /build/ccache /build/src && exec sleep infinity'
+    restart: unless-stopped
+    volumes:
+      - /opt/los:/build
+    ulimits:
+      nofile: { soft: 65536, hard: 65536 }
+    cpus: 16
+    mem_limit: 64g
+    memswap_limit: 80g
+    # privileged: true   # only if the build fails on nsjail

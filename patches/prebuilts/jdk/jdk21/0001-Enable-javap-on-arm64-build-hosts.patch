@@ -1,0 +1,57 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Martin=20=C5=A0trobl?= <recordyletsplays@gmail.com>
+Date: Fri, 13 Nov 2026 20:07:34 +0100
+Subject: [PATCH] Enable javap on arm64 build hosts
+
+javap was enabled for x86_64 only. Enable it for arm64 and add a
+linux_musl_arm64 target with the same file set from linux-arm64, which
+holds an OpenJDK 21 aarch64 build on arm64 hosts.
+---
+ Android.bp | 27 +++++++++++++++++++++++++++
+ 1 file changed, 27 insertions(+)
+
+diff --git a/Android.bp b/Android.bp
+index a1e9799..a33abbb 100644
+--- a/Android.bp
++++ b/Android.bp
+@@ -19,6 +19,9 @@ prebuilt_build_tool {
+         x86_64: {
+             enabled: true,
+         },
++        arm64: {
++            enabled: true,
++        },
+     },
+     target: {
+         linux: {
+@@ -45,6 +48,30 @@ prebuilt_build_tool {
+                 "linux-x86/conf/security/java.security",
+             ],
+         },
++        linux_musl_arm64: {
++            src: "linux-arm64/bin/javap",
++            deps: [
++                "linux-arm64/lib/libjli.so",
++                "linux-arm64/lib/jrt-fs.jar",
++                "linux-arm64/lib/jvm.cfg",
++                "linux-arm64/lib/server/libjvm.so",
++                "linux-arm64/lib/libverify.so",
++                "linux-arm64/lib/libjava.so",
++                "linux-arm64/lib/libzip.so",
++                "linux-arm64/lib/libjimage.so",
++                "linux-arm64/lib/modules",
++                "linux-arm64/lib/libnio.so",
++                "linux-arm64/lib/libnet.so",
++                "linux-arm64/lib/tzdb.dat",
++                "linux-arm64/lib/libawt.so",
++                "linux-arm64/lib/libawt_headless.so",
++                "linux-arm64/lib/libjavajpeg.so",
++                "linux-arm64/lib/liblcms.so",
++                "linux-arm64/lib/libmanagement.so",
++                "linux-arm64/lib/libmanagement_ext.so",
++                "linux-arm64/conf/security/java.security",
++            ],
++        },
+         darwin: {
+             src: "darwin-x86/bin/javap",
+             deps: [

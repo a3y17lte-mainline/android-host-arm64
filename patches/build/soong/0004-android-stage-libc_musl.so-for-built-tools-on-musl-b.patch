@@ -1,0 +1,31 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Martin=20=C5=A0trobl?= <recordyletsplays@gmail.com>
+Date: Fri, 13 Nov 2026 20:04:16 +0100
+Subject: [PATCH 4/4] android: stage libc_musl.so for built tools on musl build
+ hosts
+
+BuiltTool only added libc_musl.so to the sandbox when USE_HOST_MUSL was
+set. arm64 build hosts use musl without that flag, so sandboxed rules
+running a freshly built host tool failed to load libc_musl.so.
+
+Check BuildOS == LinuxMusl instead, which on x86_64 hosts is equivalent
+to USE_HOST_MUSL.
+---
+ android/rule_builder.go | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/android/rule_builder.go b/android/rule_builder.go
+index fec46ca..7678961 100644
+--- a/android/rule_builder.go
++++ b/android/rule_builder.go
+@@ -1412,8 +1412,8 @@ func (c *RuleBuilderCommand) getHostToolRuntimeDeps(tool string) Paths {
+ //
+ //	cmd.Tool(ctx.Config().HostToolPath(ctx, tool))
+ func (c *RuleBuilderCommand) BuiltTool(tool string) *RuleBuilderCommand {
+-	if c.rule.ctx.Config().UseHostMusl() {
+-		// If the host is using musl, assume that the tool was built against musl libc and include
++	if c.rule.ctx.Config().BuildOS == LinuxMusl {
++		// If the host is using musl (always the case on arm64 build hosts), assume that the tool was built against musl libc and include
+ 		// libc_musl.so in the sandbox.
+ 		// TODO(ccross): if we supported adding new dependencies during GenerateAndroidBuildActions
+ 		// this could be a dependency + TransitivePackagingSpecs.

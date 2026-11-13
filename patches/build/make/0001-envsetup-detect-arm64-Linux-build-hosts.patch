@@ -1,0 +1,60 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Martin=20=C5=A0trobl?= <recordyletsplays@gmail.com>
+Date: Fri, 13 Nov 2026 20:03:37 +0100
+Subject: [PATCH 1/2] envsetup: detect arm64 Linux build hosts
+
+On an aarch64 Linux host, get_host_prebuilt_prefix returned linux-x86,
+so sourcing envsetup.sh ran the x86 one-true-awk ("cannot execute binary
+file"), and envsetup.mk left HOST_ARCH empty, which kati rejects.
+
+Return linux-arm64 from get_host_prebuilt_prefix, set HOST_ARCH to arm64
+(no second arch) and HOST_PREBUILT_ARCH to arm64. HOST_OUT then becomes
+out/host/linux-arm64, matching Soong's PrebuiltOS() and HostToolDir()
+for arm64 hosts. x86_64 hosts are unchanged.
+---
+ core/envsetup.mk | 7 +++++++
+ envsetup.sh      | 6 +++++-
+ 2 files changed, 12 insertions(+), 1 deletion(-)
+
+diff --git a/core/envsetup.mk b/core/envsetup.mk
+index eb32154..27547e1 100644
+--- a/core/envsetup.mk
++++ b/core/envsetup.mk
+@@ -176,6 +176,10 @@ ifneq (,$(findstring x86_64,$(UNAME)))
+   HOST_ARCH := x86_64
+   HOST_2ND_ARCH := x86
+   HOST_IS_64_BIT := true
++else ifneq (,$(findstring aarch64,$(UNAME)))
++  HOST_ARCH := arm64
++  HOST_2ND_ARCH :=
++  HOST_IS_64_BIT := true
+ else
+ ifneq (,$(findstring i686,$(UNAME))$(findstring x86,$(UNAME)))
+ $(error Building on a 32-bit x86 host is not supported: $(UNAME)!)
+@@ -246,6 +250,9 @@ endif
+ 
+ # We don't want to move all the prebuilt host tools to a $(HOST_OS)-x86_64 dir.
+ HOST_PREBUILT_ARCH := x86
++ifeq ($(HOST_ARCH),arm64)
++  HOST_PREBUILT_ARCH := arm64
++endif
+ # This is the standard way to name a directory containing prebuilt host
+ # objects. E.g., prebuilt/$(HOST_PREBUILT_TAG)/cc
+ # This must match the logic in get_host_prebuilt_prefix in envsetup.sh
+diff --git a/envsetup.sh b/envsetup.sh
+index 453df75..8613ea8 100644
+--- a/envsetup.sh
++++ b/envsetup.sh
+@@ -138,7 +138,11 @@ function get_host_prebuilt_prefix
+ {
+   local un=$(uname)
+   if [[ $un == "Linux" ]] ; then
+-    echo linux-x86
++    if [[ $(uname -m) == "aarch64" ]] ; then
++      echo linux-arm64
++    else
++      echo linux-x86
++    fi
+   elif [[ $un == "Darwin" ]] ; then
+     echo darwin-x86
+   else

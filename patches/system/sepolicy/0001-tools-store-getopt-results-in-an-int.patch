@@ -1,0 +1,84 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Martin=20=C5=A0trobl?= <recordyletsplays@gmail.com>
+Date: Fri, 13 Nov 2026 20:07:47 +0100
+Subject: [PATCH] tools: store getopt() results in an int
+
+checkfc, sepolicy-check and the sepolicy-analyze attribute, neverallow
+and typecmp commands kept the getopt()/getopt_long() result in a char.
+char is unsigned on arm64, so the -1 end marker became 255, the loop
+never ended and option parsing failed on arm64 build hosts. getopt()
+returns int; use that.
+---
+ tools/checkfc.c                     | 2 +-
+ tools/sepolicy-analyze/attribute.c  | 2 +-
+ tools/sepolicy-analyze/neverallow.c | 2 +-
+ tools/sepolicy-analyze/typecmp.c    | 3 ++-
+ tools/sepolicy-check.c              | 2 +-
+ 5 files changed, 6 insertions(+), 5 deletions(-)
+
+diff --git a/tools/checkfc.c b/tools/checkfc.c
+index c89c7cb..5c8d184 100644
+--- a/tools/checkfc.c
++++ b/tools/checkfc.c
+@@ -444,7 +444,7 @@ int main(int argc, char **argv)
+   bool allow_empty = false;
+   bool compare = false;
+   bool test_data = false;
+-  char c;
++  int c;
+ 
+   filemode mode = filemode_file_contexts;
+ 
+diff --git a/tools/sepolicy-analyze/attribute.c b/tools/sepolicy-analyze/attribute.c
+index f7c9b4c..554f8b1 100644
+--- a/tools/sepolicy-analyze/attribute.c
++++ b/tools/sepolicy-analyze/attribute.c
+@@ -75,7 +75,7 @@ int attribute_func (int argc, char **argv, policydb_t *policydb) {
+     int rc = -1;
+     int list = 0;
+     int reverse = 0;
+-    char ch;
++    int ch;
+ 
+     struct option attribute_options[] = {
+         {"list", no_argument, NULL, 'l'},
+diff --git a/tools/sepolicy-analyze/neverallow.c b/tools/sepolicy-analyze/neverallow.c
+index 4b88206..6653f8d 100644
+--- a/tools/sepolicy-analyze/neverallow.c
++++ b/tools/sepolicy-analyze/neverallow.c
+@@ -493,7 +493,7 @@ static int check_neverallows_string(policydb_t *policydb, char *string, size_t l
+ 
+ int neverallow_func (int argc, char **argv, policydb_t *policydb) {
+     char *rules = 0, *file = 0;
+-    char ch;
++    int ch;
+ 
+     struct option neverallow_options[] = {
+         {"debug", no_argument, NULL, 'd'},
+diff --git a/tools/sepolicy-analyze/typecmp.c b/tools/sepolicy-analyze/typecmp.c
+index c00c13c..7b50c49 100644
+--- a/tools/sepolicy-analyze/typecmp.c
++++ b/tools/sepolicy-analyze/typecmp.c
+@@ -272,7 +272,8 @@ static int analyze_types(policydb_t * policydb, char diff, char equiv)
+ }
+ 
+ int typecmp_func (int argc, char **argv, policydb_t *policydb) {
+-    char ch, diff = 0, equiv = 0;
++    int ch;
++    char diff = 0, equiv = 0;
+ 
+     struct option typecmp_options[] = {
+         {"diff", no_argument, NULL, 'd'},
+diff --git a/tools/sepolicy-check.c b/tools/sepolicy-check.c
+index 713e7c1..3102548 100644
+--- a/tools/sepolicy-check.c
++++ b/tools/sepolicy-check.c
+@@ -236,7 +236,7 @@ int main(int argc, char **argv)
+ 	policydb_t policydb;
+ 	struct policy_file pf;
+ 	sidtab_t sidtab;
+-	char ch;
++	int ch;
+ 	int match = 1;
+ 
+ 	struct option long_options[] = {

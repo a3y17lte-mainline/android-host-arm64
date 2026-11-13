@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  arm64 host prebuilts for LineageOS 24.0 (android-17.0.0_r1).
+  The x86 projects stay: their Android.bp files define modules Soong needs.
+  The AOSP linux-arm64 projects have no android-17 tags; these commits are
+  the ones matching the versions pinned by the tree:
+    clang: ClangDefaultVersion clang-r584948, arm64 build is clang-r584948b
+           (setup.sh links the unsuffixed name)
+    go:    go1.25.4, same as prebuilts/go/linux-x86 at android-17.0.0_r1
+-->
+<manifest>
+  <project path="prebuilts/clang/host/linux-arm64"
+           name="platform/prebuilts/clang/host/linux-arm64"
+           remote="aosp" clone-depth="1"
+           revision="198cef08637a6133e98b4a80e36f0ca35775fa9a"
+           upstream="mirror-goog-llvm-r596125-release" />
+  <project path="prebuilts/go/linux-arm64"
+           name="platform/prebuilts/go/linux-arm64"
+           remote="aosp" clone-depth="1"
+           revision="85088d1ab9a678cc8531f9cc05de9fa802f91c58"
+           upstream="mirror-goog-llvm-r596125-release" />
+</manifest>

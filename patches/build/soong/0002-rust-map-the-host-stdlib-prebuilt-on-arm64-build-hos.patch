@@ -1,0 +1,37 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Martin=20=C5=A0trobl?= <recordyletsplays@gmail.com>
+Date: Fri, 13 Nov 2026 20:04:16 +0100
+Subject: [PATCH 2/4] rust: map the host stdlib prebuilt on arm64 build hosts
+
+rust_stdlib_prebuilt_host modules only had targets for glibc/musl x86 and
+darwin. On an arm64 Linux host (BuildOS LinuxMusl, BuildArch Arm64) the
+module in prebuilts/rust-toolchain/linux-arm64 matched no branch, was
+renamed to prebuilt_libstd.linux-arm64, and no host libstd existed.
+
+Add a linux_musl_arm64 target pointing at the
+aarch64-unknown-linux-musl rustlib directory of the linux-arm64 toolchain.
+---
+ rust/toolchain_library.go | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/rust/toolchain_library.go b/rust/toolchain_library.go
+index b78d538..597df32 100644
+--- a/rust/toolchain_library.go
++++ b/rust/toolchain_library.go
+@@ -153,6 +153,7 @@ type hostPrebuiltProps struct {
+ 		Linux_glibc_x86    hostPrebuiltTargetProps
+ 		Linux_musl_x86_64  hostPrebuiltTargetProps
+ 		Linux_musl_x86     hostPrebuiltTargetProps
++		Linux_musl_arm64   hostPrebuiltTargetProps
+ 		Darwin_x86_64      hostPrebuiltTargetProps
+ 	}
+ }
+@@ -179,6 +180,8 @@ func constructLibProps(rlib, solib bool) func(ctx android.LoadHookContext) {
+ 		} else if platform == "linux-musl-x86" && ctx.Config().BuildOS == android.LinuxMusl {
+ 			p.Target.Linux_musl_x86_64.addPrebuiltToTarget(ctx, name, rustDir, "linux-musl-x86", "x86_64-unknown-linux-musl", rlib, solib)
+ 			p.Target.Linux_musl_x86.addPrebuiltToTarget(ctx, name, rustDir, "linux-musl-x86", "i686-unknown-linux-musl", rlib, solib)
++		} else if platform == "linux-arm64" && ctx.Config().BuildOS == android.LinuxMusl && ctx.Config().BuildArch == android.Arm64 {
++			p.Target.Linux_musl_arm64.addPrebuiltToTarget(ctx, name, rustDir, "linux-arm64", "aarch64-unknown-linux-musl", rlib, solib)
+ 		} else if platform == "darwin" && ctx.Config().BuildOS == android.Darwin {
+ 			p.Target.Darwin_x86_64.addPrebuiltToTarget(ctx, name, rustDir, "darwin-x86", "x86_64-apple-darwin", rlib, solib)
+ 		} else {
