@@ -1,7 +1,7 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Martin=20=C5=A0trobl?= <recordyletsplays@gmail.com>
 Date: Fri, 13 Nov 2026 21:24:20 +0100
-Subject: [PATCH 5/7] genrule: skip host_second_srcs when the build OS has no
+Subject: [PATCH 5/8] genrule: skip host_second_srcs when the build OS has no
  32-bit target
 
 addPathDepsForProps already skips path_host_second dependencies when the

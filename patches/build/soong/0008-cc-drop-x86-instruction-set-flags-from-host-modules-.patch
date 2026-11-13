@@ -1,0 +1,63 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Martin=20=C5=A0trobl?= <recordyletsplays@gmail.com>
+Date: Fri, 13 Nov 2026 21:59:00 +0100
+Subject: [PATCH 8/8] cc: drop x86 instruction set flags from host modules on
+ arm64 hosts
+
+Cronet's GN-generated Android.bp files put the x86 host's -msse3 on
+every host module, in 613 places. On an arm64 build host clang rejects
+it ("unsupported option '-msse3' for target 'aarch64-linux-musl'").
+
+Filter x86 instruction set flags (-msse*, -mavx*, -maes, ...) from the
+local flags of arm64 host modules. Nothing changes for x86 hosts or
+device modules.
+---
+ cc/compiler.go     |  5 +++++
+ cc/config/clang.go | 18 ++++++++++++++++++
+ 2 files changed, 23 insertions(+)
+
+diff --git a/cc/compiler.go b/cc/compiler.go
+index ef3488e..adc0d7d 100644
+--- a/cc/compiler.go
++++ b/cc/compiler.go
+@@ -571,6 +571,11 @@ func (compiler *baseCompiler) compilerFlags(ctx ModuleContext, flags Flags, deps
+ 	flags.Local.CppFlags = config.ClangFilterUnknownCflags(flags.Local.CppFlags)
+ 	flags.Local.ConlyFlags = config.ClangFilterUnknownCflags(flags.Local.ConlyFlags)
+ 	flags.Local.LdFlags = config.ClangFilterUnknownCflags(flags.Local.LdFlags)
++	if ctx.Host() && ctx.Arch().ArchType == android.Arm64 {
++		flags.Local.CFlags = config.FilterX86OnlyCflags(flags.Local.CFlags)
++		flags.Local.CppFlags = config.FilterX86OnlyCflags(flags.Local.CppFlags)
++		flags.Local.ConlyFlags = config.FilterX86OnlyCflags(flags.Local.ConlyFlags)
++	}
+ 
+ 	flags = AddTargetFlags(ctx, flags, tc, ctx.minSdkVersion(), Bool(compiler.Properties.Bpf_target), ctx.isLFIVariation())
+ 
+diff --git a/cc/config/clang.go b/cc/config/clang.go
+index 3caa688..a3341ab 100644
+--- a/cc/config/clang.go
++++ b/cc/config/clang.go
+@@ -89,6 +89,24 @@ func ClangFilterUnknownCflags(cflags []string) []string {
+ 	return result
+ }
+ 
++// x86OnlyCflagPrefixes are x86 instruction set flags. Generated build files
++// (Cronet's, from GN) put the x86 host's -msse3 on every host module; clang
++// rejects these flags for arm64.
++var x86OnlyCflagPrefixes = []string{"-msse", "-mssse", "-mavx", "-maes", "-mpclmul",
++	"-mpopcnt", "-mf16c", "-mfma", "-mbmi", "-mlzcnt", "-mfpmath="}
++
++// FilterX86OnlyCflags drops x86 instruction set flags. Used for host modules
++// on arm64 build hosts.
++func FilterX86OnlyCflags(cflags []string) []string {
++	result := make([]string, 0, len(cflags))
++	for _, f := range cflags {
++		if !android.HasAnyPrefix(f, x86OnlyCflagPrefixes) {
++			result = append(result, f)
++		}
++	}
++	return result
++}
++
+ func clangTidyNegateChecks(checks []string) []string {
+ 	ret := make([]string, 0, len(checks))
+ 	for _, c := range checks {

@@ -61,6 +61,7 @@ Downloads are cached in `$HOME/.cache/android-host-arm64` (inside `/opt/los`).
 | build/soong | genrule: skip host_second_srcs without a 32-bit host | analysis panic in `art_common_host_test_libs_zip` |
 | build/soong | android: stage build-tools libraries in the sandbox | sandboxed bison could not find `libc_musl.so` |
 | build/soong | cc: stage m4 as a tool in yacc rules | m4 (an input) did not find the staged `libc_musl.so` |
+| build/soong | cc: drop x86 instruction set flags from arm64 host modules | Cronet's generated `-msse3` on every host module |
 | prebuilts/build-tools | enable bison/flex/m4/make on arm64 | modules were x86_64-only |
 | prebuilts/jdk/jdk21 | enable javap on arm64 | module was x86_64-only |
 | system/sepolicy | getopt() results in an int | `char` is unsigned on arm64: `-1` became 255 |
@@ -84,10 +85,8 @@ written against the LineageOS tree from the errors they describe.
 
 ## Known open items (fix when the build hits them)
 
-- **Cronet** (`external/cronet`): its generated Android.bp files put
-  `-msse3`/AVX flags under `target: host`, which an aarch64 clang rejects.
-  Actinis also found x86 `llvm-objdump`/`llvm-nm` called by path. Only matters
-  if a cronet host module ends up in the build.
+- **Cronet** (`external/cronet`): its `-msse3` is filtered in Soong (above).
+  Actinis also found x86 `llvm-objdump`/`llvm-nm` called by path.
 - **Rust host sysroot**: `rust_sysroot_defaults` builds the sysroot from
   source for `musl_arm64` while `libstd` is a prebuilt. Actinis hit duplicate
   `std` errors (E0464/E0460/E0152) and fixed them in `rust/builder.go`.
