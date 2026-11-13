@@ -1,0 +1,42 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Martin=20=C5=A0trobl?= <recordyletsplays@gmail.com>
+Date: Fri, 13 Nov 2026 21:44:55 +0100
+Subject: [PATCH 6/6] android: stage the build-tools libraries for sandboxed
+ tools on arm64
+
+The linux-arm64 build-tools binaries are dynamically linked against
+libc_musl.so and find it, and their other libraries, through the
+$ORIGIN/../lib64 runpath. RuleBuilderCommand.PrebuiltBuildTool only
+copied the binary into the sbox sandbox, so bison failed with "unable to
+find loader libc_musl.so" (libhidl-gen-ast yacc rule).
+
+On linux-arm64 hosts also stage libc_musl.so and the libraries ziptool
+uses. x86 hosts are unchanged.
+---
+ android/rule_builder.go | 13 ++++++++++++-
+ 1 file changed, 12 insertions(+), 1 deletion(-)
+
+diff --git a/android/rule_builder.go b/android/rule_builder.go
+index 7678961..1f5be49 100644
+--- a/android/rule_builder.go
++++ b/android/rule_builder.go
+@@ -1452,7 +1452,18 @@ func (c *RuleBuilderCommand) builtToolWithoutDeps(tool string) *RuleBuilderComma
+ //
+ //	cmd.Tool(ctx.Config().PrebuiltBuildTool(ctx, tool))
+ func (c *RuleBuilderCommand) PrebuiltBuildTool(ctx PathContext, tool string) *RuleBuilderCommand {
+-	return c.Tool(ctx.Config().PrebuiltBuildTool(ctx, tool))
++	c.Tool(ctx.Config().PrebuiltBuildTool(ctx, tool))
++	if ctx.Config().PrebuiltOS() == "linux-arm64" {
++		// The linux-arm64 build tools are dynamically linked musl binaries that
++		// find their libraries through the $ORIGIN/../lib64 runpath. Stage the
++		// ones they use (libc_musl.so for bison, flex and m4; the rest for
++		// ziptool) so they also run in a sandbox.
++		for _, lib := range []string{"libc_musl.so", "libc++.so", "libbase.so", "liblog.so",
++			"libziparchive.so", "libz-host.so"} {
++			c.ImplicitTool(PathForSource(ctx, "prebuilts/build-tools/linux-arm64/lib64", lib))
++		}
++	}
++	return c
+ }
+ 
+ // Input adds the specified input path to the command line.  The path will also be added to the dependencies returned by
