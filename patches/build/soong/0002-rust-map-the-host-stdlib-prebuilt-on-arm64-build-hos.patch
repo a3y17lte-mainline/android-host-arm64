@@ -13,12 +13,18 @@ libstd for an x86 toolchain.
 Add a linux_musl_arm64 target pointing at the aarch64-unknown-linux-musl
 rustlib directory of the linux-arm64 toolchain, and only match the
 linux-musl-x86 module on x86_64 build hosts.
+
+rust_sysroot_defaults also enables the source-built libstd for
+musl_arm64, which on x86 hosts is only a host cross target. Make the
+arm64 prebuilt preferred, so prebuilt selection gives dependencies on
+"libstd" the prebuilt and hides the source module from Make (otherwise
+both define MODULE.linux.RLIB_LIBRARIES.libstd).
 ---
- rust/toolchain_library.go | 5 ++++-
- 1 file changed, 4 insertions(+), 1 deletion(-)
+ rust/toolchain_library.go | 11 ++++++++++-
+ 1 file changed, 10 insertions(+), 1 deletion(-)
 
 diff --git a/rust/toolchain_library.go b/rust/toolchain_library.go
-index b78d538..babfc2f 100644
+index b78d538..50dc748 100644
 --- a/rust/toolchain_library.go
 +++ b/rust/toolchain_library.go
 @@ -153,6 +153,7 @@ type hostPrebuiltProps struct {
@@ -29,7 +35,7 @@ index b78d538..babfc2f 100644
  		Darwin_x86_64      hostPrebuiltTargetProps
  	}
  }
-@@ -176,9 +177,11 @@ func constructLibProps(rlib, solib bool) func(ctx android.LoadHookContext) {
+@@ -176,9 +177,17 @@ func constructLibProps(rlib, solib bool) func(ctx android.LoadHookContext) {
  		if platform == "linux-x86" && ctx.Config().BuildOS == android.Linux {
  			p.Target.Linux_glibc_x86_64.addPrebuiltToTarget(ctx, name, rustDir, "linux-x86", "x86_64-unknown-linux-gnu", rlib, solib)
  			p.Target.Linux_glibc_x86.addPrebuiltToTarget(ctx, name, rustDir, "linux-x86", "i686-unknown-linux-gnu", rlib, solib)
@@ -39,6 +45,12 @@ index b78d538..babfc2f 100644
  			p.Target.Linux_musl_x86.addPrebuiltToTarget(ctx, name, rustDir, "linux-musl-x86", "i686-unknown-linux-musl", rlib, solib)
 +		} else if platform == "linux-arm64" && ctx.Config().BuildOS == android.LinuxMusl && ctx.Config().BuildArch == android.Arm64 {
 +			p.Target.Linux_musl_arm64.addPrebuiltToTarget(ctx, name, rustDir, "linux-arm64", "aarch64-unknown-linux-musl", rlib, solib)
++			// rust_sysroot_defaults also enables the source-built sysroot
++			// libstd for musl_arm64 (a host cross target on x86 hosts).
++			// Prefer the prebuilt already in prebuilt selection, so that
++			// dependencies on "libstd" get the prebuilt and the source
++			// module is hidden from Make.
++			ctx.Module().(*Module).Prebuilt().ForcePrefer()
  		} else if platform == "darwin" && ctx.Config().BuildOS == android.Darwin {
  			p.Target.Darwin_x86_64.addPrebuiltToTarget(ctx, name, rustDir, "darwin-x86", "x86_64-apple-darwin", rlib, solib)
  		} else {

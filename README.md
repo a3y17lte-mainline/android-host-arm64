@@ -57,7 +57,7 @@ Downloads are cached in `$HOME/.cache/android-host-arm64` (inside `/opt/los`).
 | build/make | envsetup: detect arm64 Linux build hosts | `get_host_prebuilt_prefix` returned linux-x86; `HOST_ARCH` empty |
 | build/make | core: use the host's clang prebuilt | `$(BUILD_OS)-x86`/`linux-x86` hardcoded in clang paths; adds `clang/HOST_arm64.mk` |
 | build/soong | ui: host's nsjail prebuilt | nsjail path hardcoded to linux-x86, sandbox silently disabled |
-| build/soong | rust: host stdlib prebuilt on arm64 | no `linux_musl_arm64` mapping for `rust_stdlib_prebuilt_host` |
+| build/soong | rust: host stdlib prebuilt on arm64 | no `linux_musl_arm64` mapping for `rust_stdlib_prebuilt_host`; preferred over the source-built sysroot `libstd` (else both go to Make: `RLIB_LIBRARIES.libstd already defined`) |
 | build/soong | android: install under linux-arm64 | host jars installed in `linux_musl-x86` while make reads `linux-arm64` |
 | build/soong | android: stage libc_musl.so | built musl host tools could not load libc in the sandbox |
 | build/soong | genrule: skip host_second_srcs without a 32-bit host | analysis panic in `art_common_host_test_libs_zip` |

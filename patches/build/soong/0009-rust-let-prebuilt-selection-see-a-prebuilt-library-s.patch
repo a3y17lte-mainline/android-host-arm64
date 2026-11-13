@@ -6,9 +6,10 @@ Subject: [PATCH 9/9] rust: let prebuilt selection see a prebuilt library's
 
 rust_stdlib_prebuilt_host (and rust_prebuilt_library) set their files
 in rlib.srcs / dylib.srcs, which begin() only merges into srcs when the
-module's build actions are generated. Source or prebuilt selection runs
-before that, saw no srcs, treated the prebuilt as disabled and never
-replaced dependencies on the source module, force_use_prebuilt or not.
+module's build actions are generated. Prebuilt selection runs before
+that, saw no srcs and treated the prebuilt as disabled, so it never
+replaced dependencies on the source module, prefer or
+force_use_prebuilt notwithstanding.
 
 On arm64 build hosts the linux-arm64 prebuilt libstd and the source
 libstd that rust_sysroot_defaults enables for musl_arm64 both exist for
@@ -20,16 +21,17 @@ Rust staticlib got two std crates:
   error[E0464]: multiple candidates for `rlib` dependency `core` found
   error[E0152]: duplicate lang item in crate `std`: `panic_impl`
 
-Fall back to the variant's srcs in prebuiltSrcs().
+Fall back to the variant's srcs in prebuiltSrcs(), or to the rlib and
+dylib srcs before the rlib/dylib split.
 ---
- rust/prebuilt.go | 10 +++++++++-
- 1 file changed, 9 insertions(+), 1 deletion(-)
+ rust/prebuilt.go | 14 +++++++++++++-
+ 1 file changed, 13 insertions(+), 1 deletion(-)
 
 diff --git a/rust/prebuilt.go b/rust/prebuilt.go
-index b66f32e..60a94d0 100644
+index b66f32e..6b30d09 100644
 --- a/rust/prebuilt.go
 +++ b/rust/prebuilt.go
-@@ -209,7 +209,15 @@ func (prebuilt *prebuiltLibraryDecorator) nativeCoverage() bool {
+@@ -209,7 +209,19 @@ func (prebuilt *prebuiltLibraryDecorator) nativeCoverage() bool {
  }
  
  func (prebuilt *prebuiltLibraryDecorator) prebuiltSrcs(ctx android.BaseModuleContext) []string {
@@ -38,8 +40,12 @@ index b66f32e..60a94d0 100644
 +	if len(srcs) == 0 {
 +		// begin() merges the rlib/dylib srcs into Srcs, but source or
 +		// prebuilt selection runs before that and would see no srcs.
++		// Before the rlib/dylib split, any of them will do.
 +		if variant := prebuilt.variantProperties(); variant != nil {
 +			srcs = variant.Srcs.GetOrDefault(ctx, nil)
++		} else {
++			srcs = append(prebuilt.libraryDecorator.Properties.Rlib.Srcs.GetOrDefault(ctx, nil),
++				prebuilt.libraryDecorator.Properties.Dylib.Srcs.GetOrDefault(ctx, nil)...)
 +		}
 +	}
 +	return srcs
