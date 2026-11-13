@@ -1,0 +1,70 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Martin=20=C5=A0trobl?= <recordyletsplays@gmail.com>
+Date: Fri, 13 Nov 2026 21:24:20 +0100
+Subject: [PATCH 5/5] genrule: skip host_second_srcs when the build OS has no
+ 32-bit target
+
+addPathDepsForProps already skips path_host_second dependencies when the
+build OS has no 32-bit target (darwin), but genrule still resolved
+host_second_srcs and hit the "should never get here" panic. arm64 Linux
+build hosts have no 32-bit host target either, so analysis crashed in
+art_common_host_test_libs_zip.
+
+Share the check as android.HasHostSecondTarget and only resolve
+host_second_srcs when it holds.
+---
+ android/path_properties.go | 16 ++++++++++++++--
+ genrule/genrule.go         |  6 +++++-
+ 2 files changed, 19 insertions(+), 3 deletions(-)
+
+diff --git a/android/path_properties.go b/android/path_properties.go
+index ebcf189..6699e6f 100644
+--- a/android/path_properties.go
++++ b/android/path_properties.go
+@@ -133,8 +133,7 @@ func addPathDepsForProps(ctx BottomUpMutatorContext, props []interface{}) {
+ 	}
+ 	// properties tagged "path_host_second" get the host 2nd os variant
+ 	if len(pathHostSecondProperties) > 0 {
+-		var targets []Target
+-		targets, _ = decodeMultilibTargets("32", ctx.Config().Targets[ctx.Config().BuildOS], false)
++		targets := hostSecondTargets(ctx.Config())
+ 		// If a 32-bit host target exists, add the dependencies. Otherwise, do nothing.
+ 		// This is necessary to support host OSes like Darwin (macOS) that do not
+ 		// have a 32-bit multilib target.
+@@ -171,6 +170,19 @@ func addPathDepsForProps(ctx BottomUpMutatorContext, props []interface{}) {
+ 	}
+ }
+ 
++// hostSecondTargets returns the 32-bit targets of the build OS, if any.
++func hostSecondTargets(config Config) []Target {
++	targets, _ := decodeMultilibTargets("32", config.Targets[config.BuildOS], false)
++	return targets
++}
++
++// HasHostSecondTarget returns whether the build OS has a 32-bit target, which
++// properties tagged "path_host_second" resolve to. Darwin and arm64 Linux build
++// hosts have none; their path_host_second dependencies are not added.
++func HasHostSecondTarget(config Config) bool {
++	return len(hostSecondTargets(config)) > 0
++}
++
+ // indexedPropertiesForPropertyStruct uses the indexes of properties extract all their values from a
+ // property struct, returning them as a single slice of strings.
+ func indexedPropertiesForPropertyStruct(ctx BottomUpMutatorContext, ps interface{}, pathPropertyIndexes [][]int) []string {
+diff --git a/genrule/genrule.go b/genrule/genrule.go
+index 000e2d2..7915652 100644
+--- a/genrule/genrule.go
++++ b/genrule/genrule.go
+@@ -521,7 +521,11 @@ func (g *Module) generateCommonBuildActions(ctx android.ModuleContext) {
+ 	srcFiles = append(srcFiles, addLabelsForInputs("device_common_srcs", g.properties.Device_common_srcs.GetOrDefault(ctx, nil), nil)...)
+ 	srcFiles = append(srcFiles, addLabelsForInputs("common_os_srcs", g.properties.Common_os_srcs.GetOrDefault(ctx, nil), nil)...)
+ 	srcFiles = append(srcFiles, addLabelsForInputs("host_first_src", g.properties.Host_first_srcs.GetOrDefault(ctx, nil), nil)...)
+-	srcFiles = append(srcFiles, addLabelsForInputs("host_second_src", g.properties.Host_second_srcs.GetOrDefault(ctx, nil), nil)...)
++	// Without a 32-bit host target the dependencies were never added (see
++	// addPathDepsForProps), so there is nothing to resolve.
++	if android.HasHostSecondTarget(ctx.Config()) {
++		srcFiles = append(srcFiles, addLabelsForInputs("host_second_src", g.properties.Host_second_srcs.GetOrDefault(ctx, nil), nil)...)
++	}
+ 
+ 	var copyFrom android.Paths
+ 	var outputFiles android.WritablePaths

@@ -1,7 +1,7 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Martin=20=C5=A0trobl?= <recordyletsplays@gmail.com>
 Date: Fri, 13 Nov 2026 20:04:16 +0100
-Subject: [PATCH 3/4] android: install host modules under linux-arm64 on arm64
+Subject: [PATCH 3/5] android: install host modules under linux-arm64 on arm64
  hosts
 
 On an arm64 Linux host the build OS is always LinuxMusl, but
