@@ -127,23 +127,33 @@ RUST=$(sed -n 's/^\s*RustDefaultVersion\s*=\s*"\(.*\)"/\1/p' build/soong/rust/co
 RBASE=prebuilts/rust-toolchain/linux-arm64
 RDIR=$RBASE/$RUST
 declare -A RSUM=(
-	[1.93.1:rust]=701d55b62286bed013ceb2393ff7687d0953205605afaa15c62e2cd18024c32c
-	[1.93.1:musl]=d4db571644ffd89f02c3ae33cc9dbfbfadf97f9be60e12d23e08550d5563e475
+	[1.93.1:rust]=34f0ffb0cd3e334aeae344daae09984f951eeb842386406d4bdf11cd0b4c2b36
 	[1.93.1:src]=7ade6b2ef03a3b7a614d54df6637a97d18144690bd49daab63bd4b22e0e6bac0
 )
-if [ ! -x "$RDIR/bin/rustc" ] || [ ! -d "$RDIR/lib/rustlib/aarch64-unknown-linux-musl" ] \
-	|| [ ! -d "$RDIR/lib/rustlib/src/rust/library" ]; then
+# The rustc must run on musl: Soong builds host code, proc-macros included, for
+# aarch64-unknown-linux-musl, and rustc only loads proc-macros built for its
+# own host triple (a glibc rustc fails with E0463 on serde_derive). Like
+# Android's linux-musl-x86 toolchain, but from rust-lang.org: it needs the
+# system musl loader and a musl libgcc_s.so.1 (Alpine's, in third_party/).
+RFLAVOR="rust-lang $RUST aarch64-unknown-linux-musl"
+[ -e /lib/ld-musl-aarch64.so.1 ] || die "/lib/ld-musl-aarch64.so.1 missing: sudo apt-get install musl"
+if [ "$(cat "$RDIR/.android-host-arm64" 2>/dev/null)" != "$RFLAVOR" ]; then
 	[ -n "${RSUM[$RUST:rust]:-}" ] || die "no checksums for Rust $RUST: add them to RSUM"
-	# rust-lang.org builds: rustc for the glibc host, the musl std (Soong's host
-	# triple on arm64 is aarch64-unknown-linux-musl) and the stdlib sources that
-	# Soong compiles the device sysroot from.
 	rm -rf "$RDIR" "$CACHE/rust-x" && mkdir -p "$CACHE/rust-x"
-	for c in "rust-$RUST-aarch64-unknown-linux-gnu:rust" "rust-std-$RUST-aarch64-unknown-linux-musl:musl" "rust-src-$RUST:src"; do
+	for c in "rust-$RUST-aarch64-unknown-linux-musl:rust" "rust-src-$RUST:src"; do
 		t=$(fetch "https://static.rust-lang.org/dist/${c%%:*}.tar.xz" "${RSUM[$RUST:${c##*:}]}")
 		tar -xJf "$t" -C "$CACHE/rust-x"
-		"$CACHE/rust-x/${c%%:*}/install.sh" --prefix="$TOP/$RDIR" --disable-ldconfig >/dev/null
+		"$CACHE/rust-x/${c%%:*}/install.sh" --prefix="$TOP/$RDIR" --disable-ldconfig \
+			--without=rust-docs,rust-docs-json-preview >/dev/null 2>&1 \
+			|| "$CACHE/rust-x/${c%%:*}/install.sh" --prefix="$TOP/$RDIR" --disable-ldconfig >/dev/null
 	done
 	rm -rf "$CACHE/rust-x"
+	echo "369aaa6e9d099a737bad6dd3e6c2fe7bb1547ca26d22b94ee0411228f709b403  $HERE/third_party/libgcc-15.2.0-r5-aarch64.apk" \
+		| sha256sum -c --quiet - || die "third_party/libgcc apk checksum mismatch"
+	tar -xzf "$HERE/third_party/libgcc-15.2.0-r5-aarch64.apk" -C "$RDIR/lib" --strip-components=2 \
+		usr/lib/libgcc_s.so.1 2>/dev/null
+	[ -f "$RDIR/lib/libgcc_s.so.1" ] || die "could not install libgcc_s.so.1"
+	echo "$RFLAVOR" > "$RDIR/.android-host-arm64"
 fi
 if [ ! -f "$RBASE/Android.bp" ]; then
 	cat > "$RBASE/Android.bp" <<-'EOF'

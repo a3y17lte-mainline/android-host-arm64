@@ -34,9 +34,12 @@ clang and Go prebuilts.
    `prebuilts/jdk/jdk21/linux-arm64`, sha256-pinned. AOSP has no arm64 JDK 21.
    JDK 8 is only used for its jars: `jdk8/linux-arm64 -> linux-x86`.
 5. Rust 1.93.1 from rust-lang.org into `prebuilts/rust-toolchain/linux-arm64`:
-   rustc for the glibc host, the `aarch64-unknown-linux-musl` std (Soong's
-   host triple on arm64) and rust-src, plus an `Android.bp` for the host
-   `libstd`. The AOSP linux-arm64 Rust project is empty.
+   the `aarch64-unknown-linux-musl` toolchain (rustc must run on musl: Soong
+   builds host proc-macros for that triple and rustc only loads proc-macros
+   for its own host) plus rust-src, and an `Android.bp` for the host `libstd`.
+   The AOSP linux-arm64 Rust project is empty. This rustc needs the system
+   musl loader (`musl` package, in the Dockerfile) and a musl `libgcc_s.so.1`,
+   taken from Alpine's `libgcc` package in `third_party/` (sha256-checked).
    `rustc`, `rustdoc` and `clippy-driver` get a wrapper that sets
    `RUSTC_BOOTSTRAP=1`: Soong passes `-Z` flags, which a stable rust-lang.org
    build rejects, and runs rustc with a cleared environment.
