@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Galaxy A3 (2017) projects for a LineageOS 24.0 tree; put next to host-arm64.xml in
+  .repo/local_manifests/.
+
+  The kernel is built from source by the LineageOS build (TARGET_KERNEL_SOURCE). Open:
+  kernel.mk hard-codes linux-x86 host paths, which needs a patch here for arm64 hosts.
+
+  Graphics: our Mesa (Panfrost with our Midgard fixes) lives at external/mesa, next to AOSP's
+  external/mesa3d (gfxstream only, left alone). minigbm is replaced by our fork, which adds the
+  Exynos DRM as a dumb-buffer backend.
+-->
+<manifest>
+  <remove-project name="platform/external/minigbm" />
+
+  <project path="device/samsung/a3y17lte" name="device_samsung_a3y17lte"
+           remote="a3y17lte" revision="lineage-24.0" />
+  <project path="vendor/samsung/a3y17lte" name="vendor_samsung_a3y17lte"
+           remote="a3y17lte" revision="lineage-24.0" />
+  <project path="kernel/samsung/exynos7870" name="kernel_samsung_exynos7870"
+           remote="a3y17lte" revision="lineage-24.0" clone-depth="1" />
+  <project path="external/mesa" name="external_mesa"
+           remote="a3y17lte" revision="lineage-24.0" clone-depth="1" />
+  <project path="external/minigbm" name="external_minigbm"
+           remote="a3y17lte" revision="lineage-24.0" />
+</manifest>
