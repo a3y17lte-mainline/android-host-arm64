@@ -45,7 +45,13 @@ clang and Go prebuilts.
    build rejects, and runs rustc with a cleared environment.
 6. Links `prebuilts/clang/host/linux-x86/linux-arm64 -> ../linux-arm64` for the
    patched clang Soong plugin.
-7. Fails on any x86-64 binary in the arm64 prebuilts and on an x86
+7. mogrify for the LineageOS bootanimation: `prebuilts/tools-lineage` has only
+   an x86-64 static ImageMagick 6 build, so setup.sh builds the same for arm64
+   (ImageMagick 6.9.13-60 from GitHub, sha256-pinned; static, PNG + zlib only,
+   zero-configuration) into `prebuilts/tools-lineage/linux-arm64/bin/mogrify`.
+   Needs `pkg-config libpng-dev zlib1g-dev` (in the Dockerfile). The built
+   binary is cached, so only the first run compiles it.
+8. Fails on any x86-64 binary in the arm64 prebuilts and on an x86
    binfmt_misc handler.
 
 Downloads are cached in `$HOME/.cache/android-host-arm64` (inside `/opt/los`).
@@ -68,6 +74,7 @@ Downloads are cached in `$HOME/.cache/android-host-arm64` (inside `/opt/los`).
 | build/soong | rust: prebuilt selection sees rlib/dylib srcs | `force_use_prebuilt` never applied, so cc's static `libstd` (`rust_static_std`) got the source-built std while Rust modules got the prebuilt: E0464/E0152 in dex2oatd's generated Rust staticlib |
 | prebuilts/build-tools | enable bison/flex/m4/make on arm64 | modules were x86_64-only |
 | prebuilts/jdk/jdk21 | enable javap on arm64 | module was x86_64-only |
+| prebuilts/tools-lineage | enable mogrify on arm64 | `gen-bootanimation.zip` ran the x86-64 mogrify: `Exec format error` |
 | system/sepolicy | getopt() results in an int | `char` is unsigned on arm64: `-1` became 255 |
 | frameworks/libs/binary_translation | dummy intrinsics generator on arm64 hosts | Berberis disables arm64, so a genrule needed a disabled host tool |
 | prebuilts/clang/host/linux-x86 | Soong plugin: llvm tools from linux-arm64 on arm64 hosts | `llvm_prebuilt_build_tool` (llvm-objdump, ...) and `llvm-tools` pointed at x86 binaries |

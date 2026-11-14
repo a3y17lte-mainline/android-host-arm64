@@ -186,7 +186,58 @@ for t in rustc rustdoc clippy-driver; do
 done
 echo "   $("$RDIR/bin/rustc" --version), -Z enabled via RUSTC_BOOTSTRAP wrapper"
 
-# --- 6. No x86 binaries where the build looks for host tools ----------------
+# --- 6. mogrify (LineageOS bootanimation) -----------------------------------
+# prebuilts/tools-lineage ships only an x86-64 static ImageMagick 6 mogrify;
+# gen-bootanimation.zip runs it to resize and quantize the PNGs. Build the same
+# thing for arm64: static, PNG + zlib only, zero-configuration (no config files).
+MDIR=prebuilts/tools-lineage/linux-arm64/bin
+IM=6.9.13-60
+IMSUM=02eff606086cfbe678c45e2a3d262b5132e7d65121d4460354b24f20ec17e393
+MFLAVOR="ImageMagick $IM static png zlib"
+if [ -d prebuilts/tools-lineage ]; then
+	say "mogrify"
+	if [ "$(cat "$MDIR/.android-host-arm64" 2>/dev/null)" != "$MFLAVOR" ]; then
+		if [ "$(cat "$CACHE/mogrify-$IM.flavor" 2>/dev/null)" != "$MFLAVOR" ]; then
+			for f in libpng16.a libz.a libc.a; do
+				[ -n "$(find /usr/lib/aarch64-linux-gnu -maxdepth 1 -name $f)" ] \
+					|| die "$f missing: sudo apt-get install pkg-config libpng-dev zlib1g-dev"
+			done
+			command -v pkg-config >/dev/null || die "install pkg-config"
+			t=$(fetch "https://github.com/ImageMagick/ImageMagick6/archive/refs/tags/$IM.tar.gz" "$IMSUM")
+			B="$CACHE/im-build"
+			rm -rf "$B" && mkdir -p "$B"
+			tar -xzf "$t" -C "$B" --strip-components=1
+			echo "   building mogrify (ImageMagick $IM), log in $B/build.log"
+			(
+				cd "$B"
+				./configure --disable-shared --enable-static --enable-zero-configuration \
+					--without-modules --disable-openmp --disable-opencl --disable-docs \
+					--without-threads --without-magick-plus-plus --without-perl --without-x \
+					--without-bzlib --without-djvu --without-dps --without-fftw --without-flif \
+					--without-fpx --without-fontconfig --without-freetype --without-gslib \
+					--without-gvc --without-heic --without-jbig --without-jpeg --without-lcms \
+					--without-lqr --without-lzma --without-openexr --without-openjp2 \
+					--without-pango --without-raqm --without-raw --without-rsvg --without-tiff \
+					--without-webp --without-wmf --without-xml --without-zstd \
+					--with-png --with-zlib \
+					PKG_CONFIG="pkg-config --static" LDFLAGS=-static
+				make -j"$(nproc)" utilities/mogrify
+			) > "$B/build.log" 2>&1 || die "mogrify build failed, see $B/build.log"
+			file "$B/utilities/mogrify" | grep -q 'ARM aarch64.*statically linked' \
+				|| die "mogrify is not a static aarch64 binary: $(file -b "$B/utilities/mogrify")"
+			"$B/utilities/mogrify" -list format | grep -qw PNG || die "mogrify was built without PNG"
+			strip -o "$CACHE/mogrify-$IM" "$B/utilities/mogrify"
+			echo "$MFLAVOR" > "$CACHE/mogrify-$IM.flavor"
+			rm -rf "$B"
+		fi
+		mkdir -p "$MDIR"
+		install -m 755 "$CACHE/mogrify-$IM" "$MDIR/mogrify"
+		echo "$MFLAVOR" > "$MDIR/.android-host-arm64"
+	fi
+	echo "   $("$MDIR/mogrify" -version | head -1)"
+fi
+
+# --- 7. No x86 binaries where the build looks for host tools ----------------
 say "x86 check"
 # Only what runs on the host: tool dirs and host libraries. Not target
 # runtimes (clang ships x86_64 Android libs, NDK lldb-server) or test data.
@@ -195,6 +246,7 @@ hostbins() {
 	find "$C"bin "$C"libexec prebuilts/go/linux-arm64/bin prebuilts/go/linux-arm64/pkg/tool \
 		prebuilts/jdk/jdk21/linux-arm64/bin prebuilts/jdk/jdk21/linux-arm64/lib \
 		"$RDIR"/bin prebuilts/build-tools/linux-arm64 prebuilts/build-tools/path/linux-arm64 \
+		prebuilts/tools-lineage/linux-arm64 \
 		-type f -print0 2>/dev/null
 	find "$C"lib "$RDIR"/lib -maxdepth 1 -type f -print0 2>/dev/null
 }

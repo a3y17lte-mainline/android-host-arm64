@@ -1,0 +1,39 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Martin=20=C5=A0trobl?= <recordyletsplays@gmail.com>
+Date: Sat, 14 Nov 2026 13:33:25 +0100
+Subject: [PATCH] Enable mogrify on arm64 build hosts
+
+gen-bootanimation.zip ran the x86-64 linux-x86/bin/mogrify on arm64
+hosts ("Exec format error"). Enable the module for arm64 and point the
+linux_musl_arm64 target at linux-arm64/bin/mogrify, a static
+ImageMagick 6 mogrify (PNG and zlib only, like the x86 one) that
+android-host-arm64's setup.sh builds there.
+---
+ Android.bp | 6 ++++++
+ 1 file changed, 6 insertions(+)
+
+diff --git a/Android.bp b/Android.bp
+index e4b0f2d..dd71868 100644
+--- a/Android.bp
++++ b/Android.bp
+@@ -24,11 +24,17 @@ prebuilt_build_tool {
+         x86_64: {
+             enabled: true,
+         },
++        arm64: {
++            enabled: true,
++        },
+     },
+     target: {
+         linux: {
+             src: "linux-x86/bin/mogrify",
+         },
++        linux_musl_arm64: {
++            src: "linux-arm64/bin/mogrify",
++        },
+     },
+     visibility: ["//vendor:__subpackages__"],
+ }
+-- 
+2.56.0
+
