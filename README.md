@@ -51,7 +51,13 @@ clang and Go prebuilts.
    zero-configuration) into `prebuilts/tools-lineage/linux-arm64/bin/mogrify`.
    Needs `pkg-config libpng-dev zlib1g-dev` (in the Dockerfile). The built
    binary is cached, so only the first run compiles it.
-8. Fails on any x86-64 binary in the arm64 prebuilts and on an x86
+8. Mesa host tools: with `external/mesa` in the tree (local_manifests/a3y17lte.xml),
+   builds `mesa_clc`, `vtn_bindgen2` and `panfrost_compile` natively from that
+   source into `/usr/local/bin`. Panfrost precompiles its CL kernels with them;
+   they need LLVM + SPIRV-LLVM-Translator (in the Dockerfile), which the cross
+   build lacks, so the device builds Mesa with `-Dmesa-clc=system
+   -Dprecomp-compiler=system`. Rebuilt when external/mesa moves (~1 min).
+9. Fails on any x86-64 binary in the arm64 prebuilts and on an x86
    binfmt_misc handler.
 
 Downloads are cached in `$HOME/.cache/android-host-arm64` (inside `/opt/los`).

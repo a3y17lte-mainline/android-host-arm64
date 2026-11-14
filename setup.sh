@@ -239,7 +239,41 @@ if [ -d prebuilts/tools-lineage ]; then
 	echo "   $("$MDIR/mogrify" -version | head -1)"
 fi
 
-# --- 7. No x86 binaries where the build looks for host tools ----------------
+# --- 7. Mesa host tools ------------------------------------------------------
+# external/mesa (our Panfrost Mesa, built by its meson-based Android.mk) needs
+# mesa_clc, vtn_bindgen2 and panfrost_compile at build time to precompile its CL
+# kernels. They need LLVM + SPIRV-LLVM-Translator, which the cross build does not
+# have: build them natively from the same source (-Dmesa-clc=system
+# -Dprecomp-compiler=system in the device's BOARD_MESA3D_MESON_ARGS). The
+# Android.mk runs meson with /usr/bin:/usr/local/bin first, so they go to
+# /usr/local/bin. Rebuilt when external/mesa moves.
+if [ -d external/mesa/android ]; then
+	say "Mesa host tools"
+	MREV=$(git -C external/mesa rev-parse HEAD)
+	MSTAMP=/usr/local/bin/.mesa-host-tools
+	if [ "$(cat "$MSTAMP" 2>/dev/null)" != "$MREV" ]; then
+		command -v meson >/dev/null || die "meson missing (pip3 install meson, see docker/Dockerfile)"
+		B="$CACHE/mesa-host"
+		rm -rf "$B" && mkdir -p "$CACHE"
+		echo "   building for Mesa $(cat external/mesa/VERSION), log in $CACHE/mesa-host.log"
+		(
+			meson setup "$B" external/mesa --buildtype=release \
+				-Dplatforms= -Dglx=disabled -Degl=disabled -Dgbm=disabled \
+				-Dgallium-drivers=panfrost -Dvulkan-drivers= \
+				-Dllvm=enabled -Dmesa-clc=enabled -Dprecomp-compiler=enabled \
+				-Dvalgrind=disabled -Dlibunwind=disabled
+			ninja -C "$B" src/compiler/clc/mesa_clc src/compiler/spirv/vtn_bindgen2 \
+				src/panfrost/clc/panfrost_compile
+		) > "$CACHE/mesa-host.log" 2>&1 || die "Mesa host tools build failed, see $CACHE/mesa-host.log"
+		sudo install -m 755 "$B/src/compiler/clc/mesa_clc" "$B/src/compiler/spirv/vtn_bindgen2" \
+			"$B/src/panfrost/clc/panfrost_compile" /usr/local/bin/
+		echo "$MREV" | sudo tee "$MSTAMP" >/dev/null
+		rm -rf "$B"
+	fi
+	echo "   mesa_clc, vtn_bindgen2, panfrost_compile for $(cut -c1-12 "$MSTAMP")"
+fi
+
+# --- 8. No x86 binaries where the build looks for host tools ----------------
 say "x86 check"
 # Only what runs on the host: tool dirs and host libraries. Not target
 # runtimes (clang ships x86_64 Android libs, NDK lldb-server) or test data.
