@@ -5,6 +5,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     fontconfig ca-certificates curl locales sudo file tmux xz-utils nano musl \
     pkg-config libpng-dev zlib1g-dev \
     python3-pip python3-mako python3-yaml bison flex glslang-tools libdrm-dev libexpat1-dev \
+    libelf-dev dwarves \
     llvm-18-dev libclang-18-dev libclang-cpp18-dev libllvmspirvlib-18-dev spirv-tools \
  && locale-gen en_US.UTF-8 && rm -rf /var/lib/apt/lists/*
 # Mesa (external/mesa) needs meson >= 1.4; Ubuntu 24.04 has 1.3. Its Android.mk runs meson

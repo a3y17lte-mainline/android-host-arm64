@@ -3,8 +3,8 @@
   Galaxy A3 (2017) projects for a LineageOS 24.0 tree; put next to host-arm64.xml in
   .repo/local_manifests/.
 
-  The kernel is built from source by the LineageOS build (TARGET_KERNEL_SOURCE). Open:
-  kernel.mk hard-codes linux-x86 host paths, which needs a patch here for arm64 hosts.
+  The kernel is built from source by the LineageOS build (TARGET_KERNEL_SOURCE), its host
+  programs against the system libraries (patches/vendor/lineage).
 
   Graphics: our Mesa (Panfrost with our Midgard fixes) lives at external/mesa, next to AOSP's
   external/mesa3d (gfxstream only, left alone). minigbm is replaced by our fork, which adds the

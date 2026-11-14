@@ -1,0 +1,73 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Martin=20=C5=A0trobl?= <recordyletsplays@gmail.com>
+Date: Sat, 14 Nov 2026 22:44:08 +0100
+Subject: [PATCH] kernel: Use the system's host tools on non-x86 build hosts
+
+prebuilts/kernel-build-tools and the glibc sysroot exist for linux-x86
+only. On an arm64 host the kernel's host programs got x86 OpenSSL
+headers and x86 libraries to link against, and LZ4/PAHOLE pointed at
+x86 binaries.
+
+When HOST_PREBUILT_TAG is not linux-x86, build the host programs against
+the system's headers and libraries (no sysroot, no compiler-rt rtlib,
+which the host clang may not ship for the host triple) and use the
+system's lz4 and pahole. x86 hosts are unchanged.
+---
+ config/BoardConfigKernel.mk | 22 ++++++++++++++++++++--
+ 1 file changed, 20 insertions(+), 2 deletions(-)
+
+diff --git a/config/BoardConfigKernel.mk b/config/BoardConfigKernel.mk
+index e47be97..9b8cf1c 100644
+--- a/config/BoardConfigKernel.mk
++++ b/config/BoardConfigKernel.mk
+@@ -128,14 +128,32 @@ KERNEL_MAKE_FLAGS += -j$(shell getconf _NPROCESSORS_ONLN)
+ TOOLS_PATH_OVERRIDE := \
+     HIP_PATH=none PERL5LIB=$(BUILD_TOP)/prebuilts/tools-lineage/common/perl-base
+ 
++# prebuilts/kernel-build-tools and the glibc sysroot exist for x86 hosts only. Other hosts
++# (arm64) build the kernel's host programs against the system's libraries and use its lz4
++# and pahole.
++ifneq ($(HOST_PREBUILT_TAG),linux-x86)
++    KERNEL_HOST_SYSTEM_TOOLS := true
++endif
++
+ ifeq ($(TARGET_KERNEL_LIBC_SYSROOT_USE), host)
+     KERNEL_HOST_C_LD_FLAGS_SYSROOT :=
++else ifeq ($(KERNEL_HOST_SYSTEM_TOOLS),true)
++    KERNEL_HOST_C_LD_FLAGS_SYSROOT :=
+ else
+     KERNEL_HOST_C_LD_FLAGS_SYSROOT := --sysroot=$(BUILD_TOP)/prebuilts/gcc/linux-x86/host/x86_64-linux-glibc2.17-4.8/sysroot
+ endif
+ 
++ifeq ($(KERNEL_HOST_SYSTEM_TOOLS),true)
++KERNEL_MAKE_FLAGS += HOSTCFLAGS="$(KERNEL_HOST_C_LD_FLAGS_SYSROOT)"
++KERNEL_MAKE_FLAGS += HOSTLDFLAGS="$(KERNEL_HOST_C_LD_FLAGS_SYSROOT) -fuse-ld=lld"
++KERNEL_LZ4 := /usr/bin/lz4
++KERNEL_PAHOLE := /usr/bin/pahole
++else
+ KERNEL_MAKE_FLAGS += HOSTCFLAGS="$(KERNEL_HOST_C_LD_FLAGS_SYSROOT) -I$(BUILD_TOP)/prebuilts/kernel-build-tools/linux-x86/include"
+ KERNEL_MAKE_FLAGS += HOSTLDFLAGS="$(KERNEL_HOST_C_LD_FLAGS_SYSROOT) -Wl,-rpath,$(BUILD_TOP)/prebuilts/kernel-build-tools/linux-x86/lib64 -L $(BUILD_TOP)/prebuilts/kernel-build-tools/linux-x86/lib64 -fuse-ld=lld --rtlib=compiler-rt"
++KERNEL_LZ4 := $(BUILD_TOP)/prebuilts/kernel-build-tools/linux-x86/bin/lz4
++KERNEL_PAHOLE := $(BUILD_TOP)/prebuilts/kernel-build-tools/linux-x86/bin/pahole
++endif
+ 
+ TOOLS_PATH_OVERRIDE += PATH=$(BUILD_TOP)/prebuilts/tools-lineage/$(HOST_PREBUILT_TAG)/bin:$(BUILD_TOP)/prebuilts/build-tools/$(HOST_PREBUILT_TAG)/bin:$(TARGET_KERNEL_CLANG_PATH)/bin:$(BUILD_TOP)/prebuilts/rust-toolchain/$(HOST_PREBUILT_TAG)/$(TARGET_KERNEL_RUST_VERSION)/bin:$(BUILD_TOP)/prebuilts/clang-tools/$(HOST_PREBUILT_TAG)/bin:$$PATH
+ 
+@@ -160,7 +178,7 @@ KERNEL_MAKE_CMD := $(BUILD_TOP)/prebuilts/build-tools/$(HOST_PREBUILT_TAG)/bin/m
+ KERNEL_MAKE_FLAGS += LLVM=1 LLVM_IAS=1
+ 
+ # Pass prebuilt LZ4 path
+-KERNEL_MAKE_FLAGS += LZ4=$(BUILD_TOP)/prebuilts/kernel-build-tools/linux-x86/bin/lz4
++KERNEL_MAKE_FLAGS += LZ4=$(KERNEL_LZ4)
+ 
+ # Since Linux 4.16, flex and bison are required
+ KERNEL_MAKE_FLAGS += LEX=$(BUILD_TOP)/prebuilts/build-tools/$(HOST_PREBUILT_TAG)/bin/flex
+@@ -169,7 +187,7 @@ KERNEL_MAKE_FLAGS += M4=$(BUILD_TOP)/prebuilts/build-tools/$(HOST_PREBUILT_TAG)/
+ TOOLS_PATH_OVERRIDE += BISON_PKGDATADIR=$(BUILD_TOP)/prebuilts/build-tools/common/bison
+ 
+ # Since Linux 5.10, pahole is required
+-KERNEL_MAKE_FLAGS += PAHOLE=$(BUILD_TOP)/prebuilts/kernel-build-tools/linux-x86/bin/pahole
++KERNEL_MAKE_FLAGS += PAHOLE=$(KERNEL_PAHOLE)
+ 
+ # Tell rust bindgen which libclang to parse the kernel headers with
+ KERNEL_MAKE_FLAGS += LIBCLANG_PATH=$(TARGET_KERNEL_LIBCLANG_PATH)

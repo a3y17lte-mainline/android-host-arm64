@@ -83,6 +83,7 @@ Downloads are cached in `$HOME/.cache/android-host-arm64` (inside `/opt/los`).
 | prebuilts/tools-lineage | enable mogrify on arm64 | `gen-bootanimation.zip` ran the x86-64 mogrify: `Exec format error` |
 | system/sepolicy | getopt() results in an int | `char` is unsigned on arm64: `-1` became 255 |
 | frameworks/libs/binary_translation | dummy intrinsics generator on arm64 hosts | Berberis disables arm64, so a genrule needed a disabled host tool |
+| vendor/lineage | kernel: system host tools on non-x86 hosts | `prebuilts/kernel-build-tools` and the glibc sysroot are x86-only: x86 OpenSSL headers/libs for the kernel's host programs, x86 `lz4`/`pahole` |
 | prebuilts/clang/host/linux-x86 | Soong plugin: llvm tools from linux-arm64 on arm64 hosts | `llvm_prebuilt_build_tool` (llvm-objdump, ...) and `llvm-tools` pointed at x86 binaries |
 
 Checked against LineageOS 24.0 sources (2026-11-13): every patch applies with
@@ -110,4 +111,4 @@ written against the LineageOS tree from the errors they describe.
 - **Kernel**: `vendor/lineage` kernel build paths are x86 (`kernel-build-tools`,
   gcc sysroot). Not used with `TARGET_PREBUILT_KERNEL`.
 - `vendor/lineage/build/tasks/dt_image.mk` uses `prebuilts/tools-lineage/linux-x86/bin/lz4`
-  (only with `BOARD_KERNEL_SEPARATED_DT`).
+  (only with `BOARD_KERNEL_SEPARATED_DT`, `BOARD_KERNEL_LZ4C_DT` and no custom bootimg mk).
