@@ -221,7 +221,9 @@ if [ -d prebuilts/tools-lineage ]; then
 					--without-webp --without-wmf --without-xml --without-zstd \
 					--with-png --with-zlib \
 					PKG_CONFIG="pkg-config --static" LDFLAGS=-static
-				make -j"$(nproc)" utilities/mogrify
+				# libtool drops -static for programs (it only picks static .la
+				# libraries); -all-static is what makes it link with gcc -static.
+				make -j"$(nproc)" LDFLAGS=-all-static utilities/mogrify
 			) > "$B/build.log" 2>&1 || die "mogrify build failed, see $B/build.log"
 			file "$B/utilities/mogrify" | grep -q 'ARM aarch64.*statically linked' \
 				|| die "mogrify is not a static aarch64 binary: $(file -b "$B/utilities/mogrify")"
