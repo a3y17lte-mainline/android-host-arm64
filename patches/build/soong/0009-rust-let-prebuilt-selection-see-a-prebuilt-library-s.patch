@@ -1,7 +1,7 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Martin=20=C5=A0trobl?= <recordyletsplays@gmail.com>
 Date: Sat, 14 Nov 2026 00:21:00 +0100
-Subject: [PATCH 9/9] rust: let prebuilt selection see a prebuilt library's
+Subject: [PATCH 9/10] rust: let prebuilt selection see a prebuilt library's
  rlib/dylib srcs
 
 rust_stdlib_prebuilt_host (and rust_prebuilt_library) set their files

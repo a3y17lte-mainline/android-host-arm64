@@ -1,7 +1,7 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Martin=20=C5=A0trobl?= <recordyletsplays@gmail.com>
 Date: Fri, 13 Nov 2026 20:04:16 +0100
-Subject: [PATCH 1/9] ui: use the host's nsjail prebuilt for sandboxing
+Subject: [PATCH 1/10] ui: use the host's nsjail prebuilt for sandboxing
 
 nsjailPath hardcoded prebuilts/build-tools/linux-x86/bin/nsjail. On an
 arm64 host that binary cannot run, so the sandbox self-test failed and

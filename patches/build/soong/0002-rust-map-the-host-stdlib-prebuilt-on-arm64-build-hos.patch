@@ -1,7 +1,7 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Martin=20=C5=A0trobl?= <recordyletsplays@gmail.com>
 Date: Fri, 13 Nov 2026 20:04:16 +0100
-Subject: [PATCH 2/9] rust: map the host stdlib prebuilt on arm64 build hosts
+Subject: [PATCH 2/10] rust: map the host stdlib prebuilt on arm64 build hosts
 
 rust_stdlib_prebuilt_host modules only had targets for glibc/musl x86 and
 darwin. On an arm64 Linux host (BuildOS LinuxMusl, BuildArch Arm64) the

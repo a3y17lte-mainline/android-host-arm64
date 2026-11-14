@@ -1,0 +1,83 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Martin=20=C5=A0trobl?= <recordyletsplays@gmail.com>
+Date: Sat, 14 Nov 2026 11:09:15 +0100
+Subject: [PATCH 10/10] genrule: point the arm64 prebuilt bison at its data on
+ arm64 hosts
+
+The linux-arm64 bison in prebuilts/build-tools is built from
+external/bison with the same INSTALLDIR as the x86 one,
+/nonexistent/linux-x86/bin. Its gnulib relocation only works when the
+binary's directory ends in linux-x86/bin, so from linux-arm64/bin it
+falls back to /nonexistent/common/bison and genrules that run it
+without BISON_PKGDATADIR fail:
+
+  bison: /nonexistent/common/bison/m4sugar/m4sugar.m4: cannot open
+
+(external/libpcap grammar.h). cc yacc rules and Make already set
+BISON_PKGDATADIR. For genrules that use that bison as a tool on
+linux-arm64 hosts, export BISON_PKGDATADIR pointing at the
+common/bison data the prebuilt_build_tool stages next to it in the
+sandbox. x86 hosts are unchanged.
+---
+ genrule/genrule.go | 27 +++++++++++++++++++++++++++
+ 1 file changed, 27 insertions(+)
+
+diff --git a/genrule/genrule.go b/genrule/genrule.go
+index 7915652..1e1388d 100644
+--- a/genrule/genrule.go
++++ b/genrule/genrule.go
+@@ -267,6 +267,26 @@ func (g *Module) GeneratedDeps() android.Paths {
+ 
+ var _ android.SourceFileProducer = (*Module)(nil)
+ 
++// isArm64PrebuiltBison reports whether spec is the linux-arm64 bison from
++// prebuilts/build-tools. That binary was built with the x86 INSTALLDIR
++// (/nonexistent/linux-x86/bin), so its relocation never matches its real
++// linux-arm64/bin directory and it looks for its data in
++// /nonexistent/common/bison unless BISON_PKGDATADIR is set.
++func isArm64PrebuiltBison(ctx android.ModuleContext, spec android.PackagingSpec) bool {
++	return ctx.Config().PrebuiltOS() == "linux-arm64" &&
++		strings.HasSuffix(spec.RelPathInPackage(), "prebuilts/build-tools/linux-arm64/bin/bison")
++}
++
++// bisonPkgdatadirExport points bison at the common/bison data that the
++// prebuilt_build_tool packages next to it (prebuilts/build-tools/common/bison
++// relative to prebuilts/build-tools/linux-arm64/bin/bison). Exported, so it
++// holds for every command in the genrule's cmd.
++func bisonPkgdatadirExport(cmd *android.RuleBuilderCommand, spec android.PackagingSpec) string {
++	binDir := filepath.Dir(cmd.PathForPackagedTool(spec))
++	dataDir := filepath.Join(filepath.Dir(filepath.Dir(binDir)), "common", "bison")
++	return "export BISON_PKGDATADIR=" + proptools.ShellEscape(dataDir) + ";"
++}
++
+ func toolDepsMutator(ctx android.BottomUpMutatorContext) {
+ 	if g, ok := ctx.Module().(*Module); ok {
+ 		for _, tool := range g.properties.Tools {
+@@ -411,6 +431,7 @@ func (g *Module) generateCommonBuildActions(ctx android.ModuleContext) {
+ 
+ 	var tools android.Paths
+ 	var packagedTools []android.PackagingSpec
++	var bisonSpec *android.PackagingSpec
+ 	if len(g.properties.Tools) > 0 {
+ 		seenTools := make(map[string]bool)
+ 		ctx.VisitDirectDepsProxyAllowDisabled(func(module android.ModuleProxy) {
+@@ -447,6 +468,9 @@ func (g *Module) generateCommonBuildActions(ctx android.ModuleContext) {
+ 						}
+ 						// Assume that the first PackagingSpec of the module is the tool.
+ 						addLocationLabel(tag.label, packagedToolLocation{specs[0]})
++						if isArm64PrebuiltBison(ctx, specs[0]) {
++							bisonSpec = &specs[0]
++						}
+ 					} else {
+ 						tools = append(tools, path.Path())
+ 						addLocationLabel(tag.label, toolLocation{android.Paths{path.Path()}})
+@@ -670,6 +694,9 @@ func (g *Module) generateCommonBuildActions(ctx android.ModuleContext) {
+ 
+ 		g.rawCommands = append(g.rawCommands, rawCommand)
+ 
++		if bisonSpec != nil {
++			cmd.Text(bisonPkgdatadirExport(cmd, *bisonSpec))
++		}
+ 		cmd.Text(rawCommand)
+ 		cmd.Implicits(srcFiles) // need to be able to reference other srcs
+ 		cmd.Implicits(extraInputs)
