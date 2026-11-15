@@ -1,0 +1,30 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Martin=20=C5=A0trobl?= <recordyletsplays@gmail.com>
+Date: Sun, 15 Nov 2026 01:50:23 +0100
+Subject: [PATCH] kernel: Set the kernel build's job count by hand
+
+getconf _NPROCESSORS_ONLN reports 2 inside the build container, whatever
+the host has, so the kernel was built with -j2. Use KERNEL_MAKE_JOBS,
+20 unless set otherwise.
+---
+ config/BoardConfigKernel.mk | 7 +++++--
+ 1 file changed, 5 insertions(+), 2 deletions(-)
+
+diff --git a/config/BoardConfigKernel.mk b/config/BoardConfigKernel.mk
+index 9b8cf1c..b1c8b22 100644
+--- a/config/BoardConfigKernel.mk
++++ b/config/BoardConfigKernel.mk
+@@ -122,8 +122,11 @@ ifeq ($(TARGET_KERNEL_UNSAFE_DDK_HEADERS),true)
+     KERNEL_BAZEL_FLAGS += --//build/kernel/kleaf:allow_ddk_unsafe_headers
+ endif
+ 
+-# Add back threads, ninja cuts this to $(getconf _NPROCESSORS_ONLN)/2
+-KERNEL_MAKE_FLAGS += -j$(shell getconf _NPROCESSORS_ONLN)
++# Add back threads, ninja cuts this to $(getconf _NPROCESSORS_ONLN)/2.
++# Inside the build container getconf reports 2 CPUs whatever the host has, so the kernel was
++# built with -j2: take the number from KERNEL_MAKE_JOBS (default 20).
++KERNEL_MAKE_JOBS ?= 20
++KERNEL_MAKE_FLAGS += -j$(KERNEL_MAKE_JOBS)
+ 
+ TOOLS_PATH_OVERRIDE := \
+     HIP_PATH=none PERL5LIB=$(BUILD_TOP)/prebuilts/tools-lineage/common/perl-base

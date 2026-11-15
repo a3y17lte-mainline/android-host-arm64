@@ -84,6 +84,7 @@ Downloads are cached in `$HOME/.cache/android-host-arm64` (inside `/opt/los`).
 | system/sepolicy | getopt() results in an int | `char` is unsigned on arm64: `-1` became 255 |
 | frameworks/libs/binary_translation | dummy intrinsics generator on arm64 hosts | Berberis disables arm64, so a genrule needed a disabled host tool |
 | vendor/lineage | kernel: system host tools on non-x86 hosts | `prebuilts/kernel-build-tools` and the glibc sysroot are x86-only: x86 OpenSSL headers/libs for the kernel's host programs, x86 `lz4`/`pahole` |
+| vendor/lineage | kernel: job count from `KERNEL_MAKE_JOBS` (default 20) | `getconf _NPROCESSORS_ONLN` reports 2 inside the build container, so the kernel was built with `-j2` |
 | prebuilts/clang/host/linux-x86 | Soong plugin: llvm tools from linux-arm64 on arm64 hosts | `llvm_prebuilt_build_tool` (llvm-objdump, ...) and `llvm-tools` pointed at x86 binaries |
 
 Checked against LineageOS 24.0 sources (2026-11-13): every patch applies with
