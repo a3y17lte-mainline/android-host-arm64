@@ -23,4 +23,10 @@
            remote="a3y17lte" revision="lineage-24.0" clone-depth="1" />
   <project path="external/minigbm" name="external_minigbm"
            remote="a3y17lte" revision="lineage-24.0" />
+
+  <!-- Radio: our HAL (shannond) on libsamsung-ipc; built with A3_ENABLE_RADIO=true -->
+  <project path="hardware/samsung/shannond" name="hardware_samsung_shannond"
+           remote="a3y17lte" revision="main" />
+  <project path="external/libsamsung-ipc" name="external_libsamsung-ipc"
+           remote="a3y17lte" revision="a3y17lte" />
 </manifest>
